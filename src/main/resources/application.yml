@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: pdf-batch
+
+# PDF取得設定
+pdf:
+  # 取得対象のURL（カンマ区切りで複数指定可能）
+  # 例: W3CのPDFサンプル
+  urls: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+
+  # ストレージ設定
+  storage:
+    directory: ./data/pdfs
+
+  # メタデータ設定
+  metadata:
+    filename: metadata.json
+
+  # 実行設定
+  fetch:
+    # アプリケーション起動時に実行するか
+    run-on-startup: true
+    # スケジュール実行のcron式（デフォルト: 毎時0分に実行）
+    # 例:
+    # - "0 0 * * * *"     : 毎時0分
+    # - "0 */30 * * * *"  : 30分ごと
+    # - "0 0 9 * * *"     : 毎日9時
+    cron: "0 0 * * * *"
+
+# ログ設定
+logging:
+  level:
+    com.example.pdfbatch: INFO
+    okhttp3: WARN
+
