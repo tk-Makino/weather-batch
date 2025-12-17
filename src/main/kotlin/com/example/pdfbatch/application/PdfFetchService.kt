@@ -1,14 +1,11 @@
 package com.example.pdfbatch.application
 
-import com.example.pdfbatch.domain.Metadata
-import com.example.pdfbatch.domain.MetadataCollection
-import com.example.pdfbatch.ports.MetadataRepository
 import com.example.pdfbatch.ports.PdfDownloader
 import com.example.pdfbatch.ports.Storage
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.security.MessageDigest
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 /**
@@ -18,70 +15,17 @@ import java.time.format.DateTimeFormatter
 class PdfFetchService(
     private val pdfDownloader: PdfDownloader,
     private val storage: Storage,
-    private val metadataRepository: MetadataRepository
 ) {
-
     private val logger = LoggerFactory.getLogger(javaClass)
-
-    /**
-     * 指定URLからPDFを取得し、差分があれば保存
-     */
-    fun fetchAndSaveIfChanged(url: String) {
-        logger.info("Fetching PDF from: $url")
-
-        // 1. PDFをダウンロード
-        val pdfData = pdfDownloader.download(url)
-        if (pdfData == null) {
-            logger.warn("Failed to download PDF from: $url")
-            return
-        }
-
-        logger.info("Downloaded ${pdfData.size} bytes from: $url")
-
-        // 2. ハッシュ値を計算
-        val hash = calculateHash(pdfData)
-
-        // 3. 既存のメタデータをチェック
-        val existingMetadata = metadataRepository.findByUrl(url)
-
-        if (existingMetadata != null && existingMetadata.hash == hash) {
-            logger.info("No changes detected for: $url (hash: $hash)")
-            return
-        }
-
-        // 4. 差分があるため保存
-        val timestamp = LocalDateTime.now()
-        val filename = generateFilename(url, timestamp)
-
-        val saved = storage.save(filename, pdfData)
-        if (!saved) {
-            logger.error("Failed to save PDF: $filename")
-            return
-        }
-
-        logger.info("Saved PDF as: $filename")
-
-        // 5. メタデータを更新
-        val metadata = Metadata(
-            url = url,
-            filename = filename,
-            hash = hash,
-            downloadedAt = timestamp,
-            size = pdfData.size.toLong()
-        )
-
-        metadataRepository.save(metadata)
-        logger.info("Updated metadata for: $url")
-    }
 
     /**
      * 複数URLからPDFを取得
      */
     fun fetchMultiple(urls: List<String>) {
-        logger.info("Starting batch fetch for ${urls.size} URLs")
+        logger.info("Starting batch fetch for ${'$'}{urls.size} URLs")
         urls.forEach { url ->
             try {
-                fetchAndSaveIfChanged(url)
+                fetchAndSaveWeatherMap(url)
             } catch (e: Exception) {
                 logger.error("Error fetching PDF from $url", e)
             }
@@ -90,21 +34,56 @@ class PdfFetchService(
     }
 
     /**
-     * SHA-256ハッシュを計算
+     * 指定URLからPDFを取得し、差分があれば保存
      */
-    private fun calculateHash(data: ByteArray): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        val hashBytes = digest.digest(data)
-        return hashBytes.joinToString("") { "%02x".format(it) }
+    private fun fetchAndSaveWeatherMap(url: String) {
+        logger.info("Fetching PDF from: $url")
+
+        // 1. PDFをダウンロード
+        val pdfData = pdfDownloader.download(url)
+        if (pdfData == null) {
+            logger.warn("Failed to download PDF from: $url")
+            return
+        }
+        logger.info("Downloaded ${'$'}{pdfData.size} bytes from: $url")
+
+        // 2. ファイルの保存
+        val timestamp = LocalDateTime.now(ZoneOffset.UTC)
+        val filename = generateFilename(url)
+        val directoryPath = generateDirectoryPath(timestamp)
+        val relativePath = "$directoryPath/$filename"
+        if(!storage.existDirectory(directoryPath)) {
+            storage.createDirectory(directoryPath)
+            logger.info("Directory does not exist. Creating: $directoryPath")
+        }
+        if (!storage.save(relativePath, pdfData)) {
+            logger.error("Failed to save PDF: $relativePath")
+            return
+        }
+        logger.info("Saved PDF as: $relativePath")
     }
 
     /**
-     * ファイル名を生成（タイムスタンプ付き）
+     * ファイル名を生成
+     *
+     * @param url PDFのURL
+     * @return URLの最後の文字列
      */
-    private fun generateFilename(url: String, timestamp: LocalDateTime): String {
-        val dateStr = timestamp.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
-        val urlHash = url.hashCode().toString(16).takeLast(6)
-        return "pdf_${dateStr}_${urlHash}.pdf"
+    private fun generateFilename(url: String): String {
+        return url.substringAfterLast('/')
+    }
+
+    /**
+     * ディレクトリパスを生成
+     *
+     * @param timestamp タイムスタンプ
+     * @return "YYYY/MM/DD"形式の相対パス
+     */
+    private fun generateDirectoryPath(
+        timestamp: LocalDateTime
+    ): String {
+        val format = DateTimeFormatter.ofPattern("yyyy/MM/dd")
+        return timestamp.format(format)
+        // TODO hh (00/12)を追加する必要ある
     }
 }
-

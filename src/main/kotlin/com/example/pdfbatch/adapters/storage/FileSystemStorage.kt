@@ -31,6 +31,12 @@ class FileSystemStorage(
     override fun save(filename: String, data: ByteArray): Boolean {
         return try {
             val filePath = basePath.resolve(filename)
+            // 親ディレクトリがなければ作成
+            filePath.parent?.let { parent ->
+                if (!parent.exists()) {
+                    Files.createDirectories(parent)
+                }
+            }
             Files.write(filePath, data, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
             logger.info("Saved file: $filename (${data.size} bytes)")
             true
@@ -44,5 +50,23 @@ class FileSystemStorage(
         val filePath = basePath.resolve(filename)
         return filePath.exists()
     }
-}
 
+    override fun createDirectory(directory: String): Boolean {
+        return try {
+            val dirPath = basePath.resolve(directory)
+            if (!dirPath.exists()) {
+                Files.createDirectories(dirPath)
+                logger.info("Created directory: $dirPath")
+            }
+            true
+        } catch (e: Exception) {
+            logger.error("Error creating directory: $directory", e)
+            false
+        }
+    }
+
+    override fun existDirectory(directory: String): Boolean {
+        val dirPath = basePath.resolve(directory)
+        return dirPath.exists() && Files.isDirectory(dirPath)
+    }
+}
