@@ -2,9 +2,9 @@ package com.example.pdfbatch.entrypoints
 
 import com.example.pdfbatch.application.PdfFetchService
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.ApplicationArguments
 import org.springframework.boot.ApplicationRunner
+import org.springframework.core.env.Environment
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 
@@ -14,22 +14,36 @@ import org.springframework.stereotype.Component
 @Component
 class RunnerConfigAndScheduled(
     private val pdfFetchService: PdfFetchService,
-    @Value("\${pdf.urls}") private val urlsString: String,
-    @Value("\${pdf.fetch.run-on-startup:true}") private val runOnStartup: Boolean
+    private val env: Environment,
 ) : ApplicationRunner {
 
     private val logger = LoggerFactory.getLogger(javaClass)
 
+    /**
+     * URLリストの取得
+     * application.ymlの pdf.urls からカンマ区切りで取得
+     * 空白や空のエントリは除外される
+     */
     private val urls: List<String> by lazy {
-        urlsString.split(",")
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
+        val urlsString = env.getProperty("pdf.urls", "")
+        if (urlsString.isBlank()) {
+            logger.warn("No PDF URLs configured in application.yml (pdf.urls)")
+            emptyList()
+        } else {
+            urlsString.split(",")
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+                .also {
+                    logger.info("Configured ${it.size} PDF URL(s): ${it.joinToString(", ")}")
+                }
+        }
     }
 
     /**
-     * アプリケーション起動時に実行
+     * アプリケーション起動時の実行
      */
     override fun run(args: ApplicationArguments) {
+        val runOnStartup = env.getProperty("pdf.fetch.run-on-startup", Boolean::class.java, false)
         if (runOnStartup) {
             logger.info("Running PDF fetch on startup")
             executeFetch()
@@ -39,15 +53,17 @@ class RunnerConfigAndScheduled(
     }
 
     /**
-     * スケジュール実行（デフォルト: 1時間ごと）
-     * cronの設定は application.yml で変更可能
+     * 設定ファイルで設定された時間に定期実行
      */
-    @Scheduled(cron = "\${pdf.fetch.cron:0 0 * * * *}")
+    @Scheduled(cron = "\${pdf.fetch.cron}")
     fun scheduledFetch() {
-        logger.info("Starting scheduled PDF fetch")
+        logger.info("Running scheduled PDF fetch")
         executeFetch()
     }
 
+    /**
+     * PDF取得の共通処理
+     */
     private fun executeFetch() {
         if (urls.isEmpty()) {
             logger.warn("No URLs configured for PDF fetching")
