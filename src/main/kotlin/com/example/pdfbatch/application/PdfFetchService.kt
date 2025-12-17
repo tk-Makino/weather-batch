@@ -1,5 +1,6 @@
 package com.example.pdfbatch.application
 
+import com.example.pdfbatch.domain.UTC
 import com.example.pdfbatch.ports.PdfDownloader
 import com.example.pdfbatch.ports.Storage
 import org.slf4j.LoggerFactory
@@ -20,12 +21,19 @@ class PdfFetchService(
 
     /**
      * 複数URLからPDFを取得
+     *
+     * @param targetUrls PDFのURLリスト
+     * @param targetUtc 取得対象のUTC時間
+     *
      */
-    fun fetchMultiple(urls: List<String>) {
+    fun fetchMultiple(
+        targetUrls: List<String>,
+        targetUtc: UTC,
+        ) {
         logger.info("Starting batch fetch for ${'$'}{urls.size} URLs")
-        urls.forEach { url ->
+        targetUrls.forEach { url ->
             try {
-                fetchAndSaveWeatherMap(url)
+                fetchAndSaveWeatherMap(url,targetUtc)
             } catch (e: Exception) {
                 logger.error("Error fetching PDF from $url", e)
             }
@@ -35,8 +43,14 @@ class PdfFetchService(
 
     /**
      * 指定URLからPDFを取得し、差分があれば保存
+     *
+     * @param url PDFのURL
+     * @param targetUtc 取得対象のUTC時間
      */
-    private fun fetchAndSaveWeatherMap(url: String) {
+    private fun fetchAndSaveWeatherMap(
+        url: String,
+        targetUtc: UTC,
+        ) {
         logger.info("Fetching PDF from: $url")
 
         // 1. PDFをダウンロード
@@ -50,7 +64,10 @@ class PdfFetchService(
         // 2. ファイルの保存
         val timestamp = LocalDateTime.now(ZoneOffset.UTC)
         val filename = generateFilename(url)
-        val directoryPath = generateDirectoryPath(timestamp)
+        val directoryPath = generateDirectoryPath(
+            timestamp,
+            targetUtc,
+        )
         val relativePath = "$directoryPath/$filename"
         if(!storage.existDirectory(directoryPath)) {
             storage.createDirectory(directoryPath)
@@ -77,13 +94,15 @@ class PdfFetchService(
      * ディレクトリパスを生成
      *
      * @param timestamp タイムスタンプ
-     * @return "YYYY/MM/DD"形式の相対パス
+     * @param targetUtc 取得対象のUTC時間
+     *
+     * @return "YYYY/MM/DD/hh"形式の相対パス
      */
     private fun generateDirectoryPath(
-        timestamp: LocalDateTime
+        timestamp: LocalDateTime,
+        targetUtc: UTC,
     ): String {
         val format = DateTimeFormatter.ofPattern("yyyy/MM/dd")
-        return timestamp.format(format)
-        // TODO hh (00/12)を追加する必要ある
+        return timestamp.format(format) + targetUtc.hour
     }
 }
