@@ -38,7 +38,7 @@ pdf:
       https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe502_12.pdf,
       https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe504_12.pdf,
       https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe507_12.pdf,
-      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/aupa20_12.pdf,
+      https:/ｚ/www.jma.go.jp/bosai/numericmap/data/nwpmap/aupa20_12.pdf,
       https://www.jma.go.jp/bosai/numericmap/data/nwpmap/aupa25_12.pdf,
       https://www.jma.go.jp/bosai/numericmap/data/nwpmap/aupn30_12.pdf,
       https://www.jma.go.jp/bosai/numericmap/data/nwpmap/aupq35_12.pdf,
@@ -72,7 +72,7 @@ pdf:
     # - "0 0 9 * * *"     : 毎日9時
     cron:
       00utc:
-        "0 44 18 * * *"
+        "0 30 13 * * *"
       12utc:
         "0 30 1 * * *"
 

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import kotlin.text.format
 
 /**
  * PDF取得アプリケーションサービス（ユースケース）
@@ -103,6 +104,6 @@ class PdfFetchService(
         targetUtc: UTC,
     ): String {
         val format = DateTimeFormatter.ofPattern("yyyy/MM/dd")
-        return timestamp.format(format) + targetUtc.hour
+        return "${timestamp.format(format)}/${targetUtc.hour}"
     }
 }
