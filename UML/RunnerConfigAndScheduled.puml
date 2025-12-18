@@ -64,8 +64,11 @@ partition "PdfFetchService.fetchMultiple()" {
   :ログ出力: "Starting batch fetch";
   
   while (各URLに対して) is (続ける)
-    :try {;
     :fetchAndSaveWeatherMap(url)を呼び出し;
+    note right
+      try-catchでエラーハンドリング
+      例外発生時はログ出力して次へ
+    end note
     -> 詳細処理へ;
     
   endwhile (完了)
@@ -110,7 +113,7 @@ partition "PdfFetchService.fetchAndSaveWeatherMap()" {
   
   :relativePath = "$directoryPath/$filename";
   
-  if (storage.existDirectory(directoryPath)?) then (no)
+  if (ディレクトリが存在しない?) then (yes)
     :storage.createDirectory(directoryPath);
     :ログ出力: "Creating directory";
   endif
