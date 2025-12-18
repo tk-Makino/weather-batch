@@ -1,0 +1,152 @@
+@startuml RunnerConfigAndScheduled_Activity_Diagram
+title RunnerConfigAndScheduled - アクティビティダイアグラム
+
+start
+
+partition "初期化" {
+  :RunnerConfigAndScheduled コンストラクタ;
+  :PdfFetchServiceとEnvironmentを注入;
+  note right
+    - pdfFetchService: PdfFetchService
+    - env: Environment
+  end note
+  
+  :urls プロパティ初期化 (lazy);
+  note right
+    application.ymlから
+    pdf.urlsを取得
+    カンマ区切りで分割
+    空白・空エントリを除外
+  end note
+}
+
+fork
+  -> 起動時実行;
+  partition "run() - アプリケーション起動時" {
+    :run(args: ApplicationArguments);
+    :pdf.fetch.run-on-startupを取得;
+    if (run-on-startup = true?) then (yes)
+      :ログ出力: "Running PDF fetch on startup";
+      :executeFetch()を呼び出し;
+    else (no)
+      :ログ出力: "Skipping startup fetch";
+      stop
+    endif
+  }
+fork again
+  -> スケジュール実行;
+  partition "scheduledFetch() - 定期実行" {
+    :scheduledFetch();
+    note right
+      @Scheduled(cron = "${pdf.fetch.cron}")
+      設定ファイルのcron式に従って実行
+    end note
+    :ログ出力: "Running scheduled PDF fetch";
+    :executeFetch()を呼び出し;
+  }
+end fork
+
+partition "executeFetch() - 共通処理" {
+  :executeFetch();
+  
+  if (urls.isEmpty()?) then (yes)
+    :ログ出力: "No URLs configured";
+    stop
+  else (no)
+    :ログ出力: "Fetching PDFs from N URL(s)";
+    :pdfFetchService.fetchMultiple(urls)を呼び出し;
+    -> PdfFetchServiceへ;
+  endif
+}
+
+partition "PdfFetchService.fetchMultiple()" {
+  :fetchMultiple(urls: List<String>);
+  :ログ出力: "Starting batch fetch";
+  
+  while (各URLに対して) is (続ける)
+    :try {;
+    :fetchAndSaveWeatherMap(url)を呼び出し;
+    -> 詳細処理へ;
+    
+  endwhile (完了)
+  
+  :ログ出力: "Batch fetch completed";
+}
+
+partition "PdfFetchService.fetchAndSaveWeatherMap()" {
+  :fetchAndSaveWeatherMap(url: String);
+  :ログ出力: "Fetching PDF from: url";
+  
+  :1. pdfDownloader.download(url)を呼び出し;
+  note right
+    PDFをダウンロード
+    戻り値: ByteArray?
+  end note
+  
+  if (pdfData == null?) then (yes)
+    :ログ出力: "Failed to download PDF";
+    :return;
+    stop
+  else (no)
+    :ログ出力: "Downloaded N bytes";
+  endif
+  
+  :2. タイムスタンプ取得 (UTC);
+  :timestamp = LocalDateTime.now(ZoneOffset.UTC);
+  
+  :3. ファイル名生成;
+  :filename = generateFilename(url);
+  note right
+    URLの最後の文字列を取得
+    例: url.substringAfterLast('/')
+  end note
+  
+  :4. ディレクトリパス生成;
+  :directoryPath = generateDirectoryPath(timestamp);
+  note right
+    YYYY/MM/DD形式で生成
+    例: "2025/12/18"
+  end note
+  
+  :relativePath = "$directoryPath/$filename";
+  
+  if (storage.existDirectory(directoryPath)?) then (no)
+    :storage.createDirectory(directoryPath);
+    :ログ出力: "Creating directory";
+  endif
+  
+  :5. ファイル保存;
+  if (storage.save(relativePath, pdfData)?) then (success)
+    :ログ出力: "Saved PDF as: relativePath";
+  else (failure)
+    :ログ出力: "Failed to save PDF";
+    :return;
+    stop
+  endif
+}
+
+:executeFetch()完了;
+:ログ出力: "PDF fetch completed";
+
+stop
+
+legend right
+  **主要な処理フロー:**
+  1. アプリケーション起動時またはスケジュール実行
+  2. executeFetch()でURL取得処理を開始
+  3. PdfFetchService.fetchMultiple()で複数URLを処理
+  4. 各URLに対してfetchAndSaveWeatherMap()実行
+  5. PDFダウンロード→ファイル名生成→保存
+  
+  **エラーハンドリング:**
+  - URLが空の場合は処理をスキップ
+  - ダウンロード失敗時はログ出力して次のURLへ
+  - 保存失敗時はログ出力
+  
+  **依存関係:**
+  - PdfDownloader: PDF取得インターフェース
+  - Storage: ファイル保存インターフェース
+  - Environment: 設定値取得
+endlegend
+
+@enduml
