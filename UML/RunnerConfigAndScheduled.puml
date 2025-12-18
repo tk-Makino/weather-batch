@@ -29,7 +29,7 @@ fork
       :ログ出力: "Running PDF fetch on startup";
       :executeFetch()を呼び出し;
     else (no)
-      :ログ出力: "Skipping startup fetch";
+      :ログ出力: "Skipping startup fetch (run-on-startup is disabled)";
       stop
     endif
   }
@@ -50,7 +50,7 @@ partition "executeFetch() - 共通処理" {
   :executeFetch();
   
   if (urls.isEmpty()?) then (yes)
-    :ログ出力: "No URLs configured";
+    :ログ出力: "No URLs configured for PDF fetching";
     stop
   else (no)
     :ログ出力: "Fetching PDFs from N URL(s)";
@@ -87,7 +87,7 @@ partition "PdfFetchService.fetchAndSaveWeatherMap()" {
   end note
   
   if (pdfData == null?) then (yes)
-    :ログ出力: "Failed to download PDF";
+    :ログ出力: "Failed to download PDF from: $url";
     :return;
     stop
   else (no)
@@ -115,7 +115,7 @@ partition "PdfFetchService.fetchAndSaveWeatherMap()" {
   
   if (ディレクトリが存在しない?) then (yes)
     :storage.createDirectory(directoryPath);
-    :ログ出力: "Creating directory";
+    :ログ出力: "Directory does not exist. Creating: $directoryPath";
   endif
   
   :5. ファイル保存;
