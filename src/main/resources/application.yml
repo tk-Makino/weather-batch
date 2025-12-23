@@ -6,7 +6,47 @@ spring:
 pdf:
   # 取得対象のURL（カンマ区切りで複数指定可能）
   # 単一URL
-  urls: https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa252_00.pdf
+  urls:
+    00utc:
+      # 数値予報天気図
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa252_00.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa302_00.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa402_00.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa502_00.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe5782_00.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe5784_00.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe577_00.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe502_00.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe504_00.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe507_00.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/aupa20_00.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/aupa25_00.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/aupn30_00.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/aupq35_00.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/aupq78_00.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/axfe578_00.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/axjp140_00.pdf
+    12utc:
+      # 数値予報天気図
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa252_12.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa302_12.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa402_12.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa502_12.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe5782_12.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe5784_12.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe577_12.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe502_12.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe504_12.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe507_12.pdf,
+      https:/ｚ/www.jma.go.jp/bosai/numericmap/data/nwpmap/aupa20_12.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/aupa25_12.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/aupn30_12.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/aupq35_12.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/aupq78_12.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/axfe578_12.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/axjp140_12.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/auxn50_12.pdf,
+      https://www.jma.go.jp/bosai/numericmap/data/nwpmap/feas50_12.pdf
 
   # 複数URLの例（カンマ区切り）:
   # urls: https://example.com/file1.pdf,https://example.com/file2.pdf,https://example.com/file3.pdf
@@ -30,7 +70,11 @@ pdf:
     # - "0 0 * * * *"     : 毎時0分
     # - "0 */30 * * * *"  : 30分ごと
     # - "0 0 9 * * *"     : 毎日9時
-    cron: "0 0 * * * *"
+    cron:
+      00utc:
+        "0 30 13 * * *"
+      12utc:
+        "0 30 1 * * *"
 
 # ログ設定
 logging:
