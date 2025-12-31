@@ -3,6 +3,7 @@ package com.example.pdfbatch.adapters.storage
 import com.example.pdfbatch.ports.Storage
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
 import java.nio.file.Files
 import java.nio.file.Path
@@ -13,6 +14,7 @@ import kotlin.io.path.exists
  * ファイルシステムを使用したストレージ実装
  */
 @Component
+@ConditionalOnProperty(name = ["pdf.storage.type"], havingValue = "filesystem", matchIfMissing = true)
 class FileSystemStorage(
     @Value("\${pdf.storage.directory:./data/pdfs}") private val storageDirectory: String
 ) : Storage {

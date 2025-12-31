@@ -10,6 +10,16 @@ Hexagonal Architecture（ポート&アダプター）パターンを採用して
 - **差分検知**: SHA-256ハッシュによる変更検知
 - **スケジュール実行**: Spring Schedulingによる定期実行
 - **メタデータ管理**: JSON形式での履歴管理
+- **複数ストレージ対応**: ファイルシステムまたはAWS S3への保存（Phase 1/4）
+
+## Lambda移行ロードマップ
+
+このアプリケーションは、AWS Lambda移行に向けて段階的に実装を進めています。
+
+- ✅ **Phase 1**: S3ストレージ対応（現在のバージョン）
+- ⬜ **Phase 2**: Lambda用コアロジックの分離
+- ⬜ **Phase 3**: Lambdaハンドラー実装
+- ⬜ **Phase 4**: デプロイ設定（SAM/Serverless Framework）
 
 ## アーキテクチャ
 
@@ -26,11 +36,13 @@ src/main/kotlin/com/example/pdfbatch/
 │   ├── http/
 │   │   └── OkHttpPdfDownloader.kt         # HTTP通信アダプター
 │   ├── storage/
-│   │   └── FileSystemStorage.kt           # ファイルストレージアダプター
+│   │   ├── FileSystemStorage.kt           # ファイルストレージアダプター
+│   │   └── S3Storage.kt                    # S3ストレージアダプター
 │   └── persistence/
 │       └── JsonMetadataRepository.kt      # JSONリポジトリアダプター
 ├── config/
-│   └── OkHttpConfig.kt                     # OkHttp設定
+│   ├── OkHttpConfig.kt                     # OkHttp設定
+│   └── StorageConfig.kt                    # ストレージ設定
 └── entrypoints/
     └── RunnerConfigAndScheduled.kt        # 起動・スケジュール制御
 ```
@@ -39,19 +51,89 @@ src/main/kotlin/com/example/pdfbatch/
 
 `src/main/resources/application.yml` で設定を変更できます：
 
+### ファイルシステムストレージ（デフォルト）
+
 ```yaml
 pdf:
   # 取得対象のURL（カンマ区切りで複数指定可能）
   urls: https://example.com/sample.pdf,https://example.com/another.pdf
   
-  # 保存先ディレクトリ
+  # ストレージ設定
   storage:
+    type: filesystem  # デフォルト
     directory: ./data/pdfs
   
   # 実行設定
   fetch:
     run-on-startup: true          # 起動時に実行
     cron: "0 0 * * * *"           # 毎時0分に実行
+```
+
+### S3ストレージ
+
+S3にPDFを保存する場合は、以下のように設定します：
+
+```yaml
+pdf:
+  urls: https://example.com/sample.pdf
+  
+  # ストレージ設定
+  storage:
+    type: s3  # S3を使用
+    s3:
+      bucket-name: weather-batch-pdfs  # S3バケット名
+      region: ap-northeast-1            # AWSリージョン
+      prefix: pdfs/                     # S3内のプレフィックス
+  
+  # 実行設定
+  fetch:
+    run-on-startup: true
+    cron: "0 0 * * * *"
+```
+
+#### AWS認証情報の設定
+
+S3を使用する場合、AWS認証情報が必要です：
+
+**ローカル開発:**
+- `~/.aws/credentials` ファイルを設定
+- または環境変数 `AWS_ACCESS_KEY_ID` と `AWS_SECRET_ACCESS_KEY` を設定
+
+```bash
+# 環境変数での設定例
+export AWS_ACCESS_KEY_ID=your-access-key
+export AWS_SECRET_ACCESS_KEY=your-secret-key
+export AWS_REGION=ap-northeast-1
+export S3_BUCKET_NAME=weather-batch-pdfs
+```
+
+**EC2/Lambda（本番環境）:**
+- IAMロールを使用（推奨）
+- 環境変数やクレデンシャルファイルは不要
+
+#### 必要なIAM権限
+
+S3ストレージを使用するには、以下のIAM権限が必要です：
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:ListBucket",
+        "s3:HeadObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::weather-batch-pdfs/*",
+        "arn:aws:s3:::weather-batch-pdfs"
+      ]
+    }
+  ]
+}
 ```
 
 ### Cron式の例
