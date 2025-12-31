@@ -16,36 +16,54 @@ Hexagonal Architecture（ポート&アダプター）パターンを採用して
 
 このアプリケーションは、AWS Lambda移行に向けて段階的に実装を進めています。
 
-- ✅ **Phase 1**: S3ストレージ対応（現在のバージョン）
-- ⬜ **Phase 2**: Lambda用コアロジックの分離
-- ⬜ **Phase 3**: Lambdaハンドラー実装
-- ⬜ **Phase 4**: デプロイ設定（SAM/Serverless Framework）
+- ✅ **Phase 1**: S3ストレージ対応
+- ✅ **Phase 2**: Spring依存削除、Lambda対応（現在）
+- ⬜ **Phase 3**: Lambdaハンドラー実装完了
+- ⬜ **Phase 4**: デプロイ設定（SAM/Serverless）
+
+## AWS Lambda Migration Progress
+
+このプロジェクトは段階的にAWS Lambdaへ移行中です。
+
+- ✅ **Phase 1**: S3ストレージ対応
+- ✅ **Phase 2**: Spring依存削除、Lambda対応（現在）
+- ⬜ **Phase 3**: Lambdaハンドラー実装完了
+- ⬜ **Phase 4**: デプロイ設定（SAM/Serverless）
 
 ## アーキテクチャ
 
 ```
 src/main/kotlin/com/example/pdfbatch/
-├── Application.kt                          # エントリーポイント
+├── Application.kt                          # エントリーポイント（Spring Boot）
+├── lambda/
+│   └── LambdaHandler.kt                    # Lambda エントリーポイント
+├── di/
+│   └── DependencyContainer.kt              # 手動DIコンテナ（Lambda用）
+├── config/
+│   ├── AppConfig.kt                        # 環境変数設定（Lambda用）
+│   ├── OkHttpConfig.kt                     # OkHttp設定
+│   └── StorageConfig.kt                    # ストレージ設定
 ├── domain/
 │   └── Metadata.kt                         # ドメインモデル
 ├── ports/
 │   └── Ports.kt                            # インターフェース定義
 ├── application/
-│   └── PdfFetchService.kt                  # アプリケーションサービス（ユースケース）
+│   └── PdfFetchService.kt                  # アプリケーションサービス（@Service）
 ├── adapters/
 │   ├── http/
-│   │   └── OkHttpPdfDownloader.kt         # HTTP通信アダプター
-│   ├── storage/
-│   │   ├── FileSystemStorage.kt           # ファイルストレージアダプター
-│   │   └── S3Storage.kt                    # S3ストレージアダプター
-│   └── persistence/
-│       └── JsonMetadataRepository.kt      # JSONリポジトリアダプター
-├── config/
-│   ├── OkHttpConfig.kt                     # OkHttp設定
-│   └── StorageConfig.kt                    # ストレージ設定
+│   │   └── OkHttpPdfDownloader.kt         # HTTP通信アダプター（@Component）
+│   └── storage/
+│       └── S3Storage.kt                    # S3ストレージアダプター（@Component）
 └── entrypoints/
-    └── RunnerConfigAndScheduled.kt        # 起動・スケジュール制御
+    └── RunnerConfigAndScheduled.kt        # 起動・スケジュール制御（Spring Boot）
 ```
+
+### 依存関係管理
+
+- **Lambda実行時**: `DependencyContainer`（手動DI）でインスタンスを生成
+- **Spring Boot実行時**: Spring DIで自動的にインスタンスを注入
+
+コアロジック（PdfFetchService、OkHttpPdfDownloader、S3Storage）はSpringアノテーションを持つが、Lambda実行時は`DependencyContainer`が直接インスタンス化します。
 
 ## 設定
 
@@ -142,6 +160,43 @@ S3ストレージを使用するには、以下のIAM権限が必要です：
 - `0 */30 * * * *` - 30分ごと
 - `0 0 9 * * *` - 毎日9時
 - `0 0 */6 * * *` - 6時間ごと
+
+## 実行方法
+
+### Lambda として実行
+
+環境変数を設定してLambdaハンドラーをテスト：
+
+```bash
+export PDF_URLS=https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa252_00.pdf
+export S3_BUCKET_NAME=your-bucket-name
+export AWS_REGION=ap-northeast-1
+
+# ローカルテスト（SAM CLI使用）
+sam local invoke -e event.json
+```
+
+#### テストイベント (event.json)
+
+```json
+{
+  "id": "cdc73f9d-aea9-11e3-9d5a-835b769c0d9c",
+  "detail-type": "Scheduled Event",
+  "source": "aws.events",
+  "time": "2025-12-31T10:00:00Z",
+  "region": "ap-northeast-1",
+  "resources": ["arn:aws:events:ap-northeast-1:123456789012:rule/my-schedule"],
+  "detail": {}
+}
+```
+
+### Spring Boot として実行（ローカル開発）
+
+既存の方法で引き続き実行可能：
+
+```bash
+./gradlew bootRun
+```
 
 ## ビルドと実行
 
