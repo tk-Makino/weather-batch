@@ -1,5 +1,6 @@
 package com.example.pdfbatch.adapters.storage
 
+import com.example.pdfbatch.config.StorageProperties
 import com.example.pdfbatch.ports.Storage
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -16,11 +17,12 @@ import software.amazon.awssdk.services.s3.model.*
 @Component
 @ConditionalOnProperty(name = ["pdf.storage.type"], havingValue = "s3")
 class S3Storage(
-    @Value("\${pdf.storage.s3.bucket-name}") private val bucketName: String,
-    @Value("\${pdf.storage.s3.region:ap-northeast-1}") private val regionName: String,
-    @Value("\${pdf.storage.s3.prefix:pdfs/}") private val prefix: String
+    private val properties: StorageProperties,
 ) : Storage {
 
+    private val bucketName: String = properties.s3.bucketName
+    private val regionName: String = properties.s3.region
+    private val prefix: String = properties.s3.prefix
     private val logger = LoggerFactory.getLogger(javaClass)
     private val s3Client: S3Client = S3Client.builder()
         .region(Region.of(regionName))
@@ -30,7 +32,7 @@ class S3Storage(
         logger.info("Initialized S3Storage with bucket: $bucketName, region: $regionName, prefix: $prefix")
     }
 
-    override fun save(filename: String, data: ByteArray): Boolean {
+    override fun saveFileToS3(filename: String, data: ByteArray): Boolean {
         return try {
             val key = buildKey(filename)
             val putRequest = PutObjectRequest.builder()
