@@ -5,10 +5,11 @@ package com.example.pdfbatch.ports
  */
 interface Storage {
     /**
-     * PDFファイルを保存
+     * PDFファイルをS3に保存する
+     *
      * @return 保存に成功した場合true
      */
-    fun save(filename: String, data: ByteArray): Boolean
+    fun saveFileToS3(filename: String, data: ByteArray): Boolean
 
     /**
      * ファイルが既に存在するかチェック

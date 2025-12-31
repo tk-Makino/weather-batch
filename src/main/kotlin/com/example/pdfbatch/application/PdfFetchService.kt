@@ -56,7 +56,7 @@ class PdfFetchService(
             storage.createDirectory(directoryPath)
             logger.info("Directory does not exist. Creating: $directoryPath")
         }
-        if (!storage.save(relativePath, pdfData)) {
+        if (!storage.saveFileToS3(relativePath, pdfData)) {
             logger.error("Failed to save PDF: $relativePath")
             return
         }
