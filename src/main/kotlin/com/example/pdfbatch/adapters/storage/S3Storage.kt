@@ -1,10 +1,7 @@
 package com.example.pdfbatch.adapters.storage
 
-import com.example.pdfbatch.config.StorageProperties
 import com.example.pdfbatch.ports.Storage
 import org.slf4j.LoggerFactory
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.stereotype.Component
 import software.amazon.awssdk.core.sync.RequestBody
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
@@ -13,26 +10,25 @@ import software.amazon.awssdk.services.s3.model.*
 /**
  * S3を使用したストレージ実装
  */
-@Component
-@ConditionalOnProperty(name = ["pdf.storage.type"], havingValue = "s3")
 class S3Storage(
-    properties: StorageProperties,
+    bucketName: String,
+    region: String,
+    prefix: String = ""
 ) : Storage {
 
     /**
      * S3の設定
      */
-    private val bucketName: String = properties.s3.bucketName ?: ""
-    private val regionName: String = properties.s3.region ?:""
-    private val prefix: String = properties.s3.prefix ?: ""
+    private val bucketName: String = bucketName
+    private val prefix: String = prefix
     private val s3Client: S3Client = S3Client.builder()
-        .region(Region.of(regionName))
+        .region(Region.of(region))
         .build()
 
     private val logger = LoggerFactory.getLogger(javaClass)
 
     init {
-        logger.info("Initialized S3Storage with bucket: $bucketName, region: $regionName, prefix: $prefix")
+        logger.info("Initialized S3Storage with bucket: $bucketName, region: $region, prefix: $prefix")
     }
 
     override fun saveFileToS3(filename: String, data: ByteArray): Boolean {

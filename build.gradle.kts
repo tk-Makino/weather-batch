@@ -30,6 +30,10 @@ dependencies {
     implementation(platform("software.amazon.awssdk:bom:2.29.45"))
     implementation("software.amazon.awssdk:s3")
     
+    // AWS Lambda Runtime
+    implementation("com.amazonaws:aws-lambda-java-core:1.2.3")
+    implementation("com.amazonaws:aws-lambda-java-events:3.14.0")
+    
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
