@@ -21,13 +21,7 @@ class LambdaHandler : RequestHandler<ScheduledEvent, String> {
         
         return try {
             val config = com.example.pdfbatch.config.AppConfig.fromEnvironment()
-            config.pdfUrls.forEach { url ->
-                try {
-                    pdfFetchService.fetchMultiple(listOf(url))
-                } catch (e: Exception) {
-                    logger.error("Error fetching PDF from $url", e)
-                }
-            }
+            pdfFetchService.fetchMultiple(config.pdfUrls)
             logger.info("PDF fetch completed successfully")
             "Success: PDF fetch completed"
         } catch (e: Exception) {

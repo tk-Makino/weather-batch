@@ -12,12 +12,13 @@ data class AppConfig(
     val s3MetadataKey: String
 ) {
     companion object {
+        private const val DEFAULT_PDF_URL = "https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa252_00.pdf"
+        
         /**
          * 環境変数から設定を読み取る
          */
         fun fromEnvironment(): AppConfig {
-            val pdfUrlsStr = System.getenv("PDF_URLS") 
-                ?: "https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa252_00.pdf"
+            val pdfUrlsStr = System.getenv("PDF_URLS") ?: DEFAULT_PDF_URL
             
             return AppConfig(
                 pdfUrls = pdfUrlsStr.split(",").map { it.trim() },

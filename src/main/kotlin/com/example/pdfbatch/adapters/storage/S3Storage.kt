@@ -11,16 +11,11 @@ import software.amazon.awssdk.services.s3.model.*
  * S3を使用したストレージ実装
  */
 class S3Storage(
-    bucketName: String,
-    region: String,
-    prefix: String = ""
+    private val bucketName: String,
+    private val region: String,
+    private val prefix: String = ""
 ) : Storage {
 
-    /**
-     * S3の設定
-     */
-    private val bucketName: String = bucketName
-    private val prefix: String = prefix
     private val s3Client: S3Client = S3Client.builder()
         .region(Region.of(region))
         .build()
