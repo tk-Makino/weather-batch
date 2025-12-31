@@ -37,8 +37,9 @@ data class StorageProperties(
 /**
  * S3設定プロパティ
  */
+@ConfigurationProperties(prefix = "pdf.storage.s3")
 data class S3Properties(
     val bucketName: String = "weather-batch-pdfs",
-    val region: String = "ap-northeast-1",
+    val region: String = "ap-southeast-2",
     val prefix: String = "pdfs/"
 )
