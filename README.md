@@ -38,9 +38,9 @@ src/main/kotlin/com/example/pdfbatch/
 ├── lambda/
 │   └── LambdaHandler.kt                    # Lambda エントリーポイント
 ├── di/
-│   └── DependencyContainer.kt              # 手動DIコンテナ
+│   └── DependencyContainer.kt              # 手動DIコンテナ（Lambda用）
 ├── config/
-│   ├── AppConfig.kt                        # 環境変数設定
+│   ├── AppConfig.kt                        # 環境変数設定（Lambda用）
 │   ├── OkHttpConfig.kt                     # OkHttp設定
 │   └── StorageConfig.kt                    # ストレージ設定
 ├── domain/
@@ -48,28 +48,22 @@ src/main/kotlin/com/example/pdfbatch/
 ├── ports/
 │   └── Ports.kt                            # インターフェース定義
 ├── application/
-│   ├── PdfFetchService.kt                  # アプリケーションサービス（Pure Kotlin）
-│   └── spring/
-│       └── SpringPdfFetchService.kt        # Spring Boot用ラッパー
+│   └── PdfFetchService.kt                  # アプリケーションサービス（@Service）
 ├── adapters/
 │   ├── http/
-│   │   ├── OkHttpPdfDownloader.kt         # HTTP通信アダプター（Pure Kotlin）
-│   │   └── spring/
-│   │       └── SpringOkHttpPdfDownloader.kt # Spring Boot用ラッパー
+│   │   └── OkHttpPdfDownloader.kt         # HTTP通信アダプター（@Component）
 │   └── storage/
-│       ├── S3Storage.kt                    # S3ストレージアダプター（Pure Kotlin）
-│       └── spring/
-│           └── SpringS3Storage.kt          # Spring Boot用ラッパー
+│       └── S3Storage.kt                    # S3ストレージアダプター（@Component）
 └── entrypoints/
     └── RunnerConfigAndScheduled.kt        # 起動・スケジュール制御（Spring Boot）
 ```
 
 ### 依存関係管理
 
-- **Lambda実行時**: `DependencyContainer`（手動DI）
-- **Spring Boot実行時**: `DependencyContainer` + Spring Context
+- **Lambda実行時**: `DependencyContainer`（手動DI）でインスタンスを生成
+- **Spring Boot実行時**: Spring DIで自動的にインスタンスを注入
 
-コアロジックはPure Kotlinで実装されており、実行環境に依存しません。
+コアロジック（PdfFetchService、OkHttpPdfDownloader、S3Storage）はSpringアノテーションを持つが、Lambda実行時は`DependencyContainer`が直接インスタンス化します。
 
 ## 設定
 
