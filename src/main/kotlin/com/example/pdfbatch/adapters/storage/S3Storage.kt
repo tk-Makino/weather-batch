@@ -20,13 +20,17 @@ class S3Storage(
     private val properties: StorageProperties,
 ) : Storage {
 
-    private val bucketName: String = properties.s3.bucketName
-    private val regionName: String = properties.s3.region
-    private val prefix: String = properties.s3.prefix
-    private val logger = LoggerFactory.getLogger(javaClass)
+    /**
+     * S3の設定
+     */
+    private val bucketName: String = properties.s3.bucketName ?: ""
+    private val regionName: String = properties.s3.region ?:""
+    private val prefix: String = properties.s3.prefix ?: ""
     private val s3Client: S3Client = S3Client.builder()
         .region(Region.of(regionName))
         .build()
+
+    private val logger = LoggerFactory.getLogger(javaClass)
 
     init {
         logger.info("Initialized S3Storage with bucket: $bucketName, region: $regionName, prefix: $prefix")
