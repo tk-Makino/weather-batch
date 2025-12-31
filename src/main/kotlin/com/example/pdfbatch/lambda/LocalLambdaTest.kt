@@ -44,7 +44,6 @@ fun main() {
     // モックのScheduledEventを作成
     val event = ScheduledEvent().apply {
         id = "local-test-event-${System.currentTimeMillis()}"
-        time = java.time.Instant.now().toString()
         region = "ap-northeast-1"
         source = "local.test"
         detailType = "Scheduled Event"
@@ -86,7 +85,13 @@ class MockLambdaContext : Context {
     override fun getClientContext() = null
     override fun getRemainingTimeInMillis() = 300000
     override fun getMemoryLimitInMB() = 512
-    override fun getLogger() = LambdaLogger { message -> 
-        println("[Lambda] $message") 
+    override fun getLogger() = object : LambdaLogger {
+        override fun log(message: String) {
+            println("[Lambda] $message")
+        }
+        
+        override fun log(message: ByteArray) {
+            println("[Lambda] ${String(message)}")
+        }
     }
 }
