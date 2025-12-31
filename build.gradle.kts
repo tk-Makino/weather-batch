@@ -53,8 +53,8 @@ tasks.withType<Test> {
 // Lambda用のビルドタスク
 tasks.register<Zip>("buildLambdaZip") {
     dependsOn("build")
-    from(tasks.compileKotlin)
-    from(tasks.processResources)
+    from(tasks.compileKotlin.get().outputs)
+    from(tasks.processResources.get().outputs)
     into("lib") {
         from(configurations.runtimeClasspath)
     }

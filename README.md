@@ -62,9 +62,7 @@ export AWS_SECRET_ACCESS_KEY=your-secret-key
 
 # IntelliJ IDEAで実行
 # src/main/kotlin/com/example/pdfbatch/lambda/LocalLambdaTest.kt を開いて実行
-
-# またはGradleから実行
-./gradlew run --args="com.example.pdfbatch.lambda.LocalLambdaTestKt"
+# または右クリック → Run 'LocalLambdaTestKt'
 ```
 
 ### 3. SAMでローカルテスト
@@ -224,11 +222,17 @@ functions:
 
 #### スケジュール例
 
+**注意**: AWS EventBridgeのcron式は6フィールド形式で、Unix cronとは異なります。
+
 - `cron(0 * * * ? *)` - 毎時0分
 - `cron(0 */6 * * ? *)` - 6時間ごと
 - `cron(0 0 * * ? *)` - 毎日0時
 - `cron(0 9 * * ? *)` - 毎日9時
 - `rate(1 hour)` - 1時間ごと
+
+フォーマット: `cron(分 時 日 月 曜日 年)`
+- 曜日または日のどちらかに `?` を使用する必要があります
+- `*` は「すべて」を意味します
 
 ## 📊 モニタリング
 
@@ -312,8 +316,7 @@ weather-batch/
 │   ├── application/         # ユースケース
 │   ├── adapters/            # 外部システム接続
 │   │   ├── http/            # HTTP通信
-│   │   ├── storage/         # S3ストレージ
-│   │   └── persistence/     # メタデータ管理
+│   │   └── storage/         # S3ストレージ
 │   ├── config/              # 設定管理
 │   ├── di/                  # 依存性注入
 │   └── lambda/              # Lambdaエントリーポイント
