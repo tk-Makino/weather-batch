@@ -23,7 +23,7 @@ class S3Storage(
      * S3の設定
      */
     private val bucketName: String = properties.s3.bucketName ?: ""
-    private val regionName: String = properties.s3.region ?:""
+    private val regionName: String = properties.s3.region ?: ""
     private val prefix: String = properties.s3.prefix ?: ""
     private val s3Client: S3Client = S3Client.builder()
         .region(Region.of(regionName))
