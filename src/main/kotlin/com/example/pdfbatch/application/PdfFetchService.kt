@@ -3,7 +3,6 @@ package com.example.pdfbatch.application
 import com.example.pdfbatch.ports.PdfDownloader
 import com.example.pdfbatch.ports.Storage
 import org.slf4j.LoggerFactory
-import org.springframework.stereotype.Service
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -11,7 +10,6 @@ import java.time.format.DateTimeFormatter
 /**
  * PDF取得アプリケーションサービス（ユースケース）
  */
-@Service
 class PdfFetchService(
     private val pdfDownloader: PdfDownloader,
     private val storage: Storage,

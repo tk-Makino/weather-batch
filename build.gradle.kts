@@ -1,7 +1,5 @@
 plugins {
     kotlin("jvm") version "2.2.21"
-    kotlin("plugin.spring") version "2.2.21"
-    id("org.springframework.boot") version "4.0.0"
     id("io.spring.dependency-management") version "1.1.7"
 }
 
@@ -20,13 +18,12 @@ repositories {
 }
 
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
     
-    // AWS SDK for S3
+    // AWS SDK
     implementation(platform("software.amazon.awssdk:bom:2.29.45"))
     implementation("software.amazon.awssdk:s3")
     
@@ -34,21 +31,46 @@ dependencies {
     implementation("com.amazonaws:aws-lambda-java-core:1.2.3")
     implementation("com.amazonaws:aws-lambda-java-events:3.14.0")
     
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    // Logging
+    implementation("org.slf4j:slf4j-api:2.0.9")
+    implementation("ch.qos.logback:logback-classic:1.4.14")
+    
+    // Test
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 kotlin {
     compilerOptions {
-        freeCompilerArgs.addAll("-Xjsr305=strict", "-Xannotation-default-target=param-property")
+        freeCompilerArgs.addAll("-Xjsr305=strict")
     }
-}
-
-springBoot {
-    mainClass.set("com.example.pdfbatch.ApplicationKt")
 }
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+// Lambda用のビルドタスク
+tasks.register<Zip>("buildLambdaZip") {
+    dependsOn("build")
+    from(tasks.compileKotlin)
+    from(tasks.processResources)
+    into("lib") {
+        from(configurations.runtimeClasspath)
+    }
+    archiveFileName.set("weather-batch.zip")
+    destinationDirectory.set(file("build/distributions"))
+}
+
+// Shadowプラグインを使った単一JARの作成（オプション）
+// より簡単なデプロイ方法
+tasks.register<Jar>("buildFatJar") {
+    dependsOn("build")
+    archiveClassifier.set("all")
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    manifest {
+        attributes["Main-Class"] = "com.example.pdfbatch.lambda.LambdaHandler"
+    }
+    from(sourceSets.main.get().output)
+    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
 }

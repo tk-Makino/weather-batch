@@ -1,0 +1,93 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Weather Batch Lambda Function - Fetch weather charts from JMA
+
+Globals:
+  Function:
+    Timeout: 300
+    MemorySize: 512
+    Runtime: java21
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        PDF_URLS: https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa252_00.pdf
+        S3_PREFIX: pdfs/
+        S3_METADATA_KEY: pdfs/metadata.json
+
+Parameters:
+  S3BucketName:
+    Type: String
+    Default: weather-batch-pdfs
+    Description: S3 bucket name for storing PDFs
+  
+  ScheduleExpression:
+    Type: String
+    Default: cron(0 * * * ? *)
+    Description: CloudWatch Events schedule expression (default: every hour)
+
+Resources:
+  # Lambda Function
+  WeatherBatchFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: weather-batch
+      Handler: com.example.pdfbatch.lambda.LambdaHandler::handleRequest
+      CodeUri: build/distributions/weather-batch.zip
+      Description: Fetch weather charts from JMA and store to S3
+      Environment:
+        Variables:
+          S3_BUCKET_NAME: !Ref S3BucketName
+          AWS_REGION: !Ref AWS::Region
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref S3BucketName
+      Events:
+        HourlySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: !Ref ScheduleExpression
+            Description: Hourly PDF fetch schedule
+            Enabled: true
+  
+  # S3 Bucket
+  WeatherBatchBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref S3BucketName
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldVersions
+            Status: Enabled
+            NoncurrentVersionExpirationInDays: 30
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # CloudWatch Log Group
+  WeatherBatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${WeatherBatchFunction}
+      RetentionInDays: 30
+
+Outputs:
+  WeatherBatchFunctionArn:
+    Description: Weather Batch Lambda Function ARN
+    Value: !GetAtt WeatherBatchFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-FunctionArn
+  
+  WeatherBatchBucketName:
+    Description: S3 Bucket Name
+    Value: !Ref WeatherBatchBucket
+    Export:
+      Name: !Sub ${AWS::StackName}-BucketName
+  
+  WeatherBatchSchedule:
+    Description: Schedule Expression
+    Value: !Ref ScheduleExpression

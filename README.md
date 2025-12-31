@@ -1,322 +1,337 @@
-# PDF Batch Application
+# Weather Batch - AWS Lambda
 
-Kotlin + Spring Boot 4.0.0 で構築された、OkHttp を使用したPDF定期取得バッチアプリケーションです。
-Hexagonal Architecture（ポート&アダプター）パターンを採用しています。
+気象庁HPから天気図を定期的に取得し、S3に保存するAWS Lambdaバッチアプリケーションです。
 
-## 特徴
-
-- **Hexagonal Architecture**: ドメインロジックとインフラストラクチャの分離
-- **OkHttp**: 効率的なHTTPクライアント
-- **差分検知**: SHA-256ハッシュによる変更検知
-- **スケジュール実行**: Spring Schedulingによる定期実行
-- **メタデータ管理**: JSON形式での履歴管理
-- **複数ストレージ対応**: ファイルシステムまたはAWS S3への保存（Phase 1/4）
-
-## Lambda移行ロードマップ
-
-このアプリケーションは、AWS Lambda移行に向けて段階的に実装を進めています。
+## 🎯 AWS Lambda Migration Status
 
 - ✅ **Phase 1**: S3ストレージ対応
-- ✅ **Phase 2**: Spring依存削除、Lambda対応（現在）
-- ⬜ **Phase 3**: Lambdaハンドラー実装完了
-- ⬜ **Phase 4**: デプロイ設定（SAM/Serverless）
+- ✅ **Phase 2**: Spring依存削除、Lambda対応
+- ✅ **Phase 3**: Lambda専用構成、デプロイ設定完了 **← 現在**
+- ⬜ **Phase 4**: 本番デプロイ、運用開始
 
-## AWS Lambda Migration Progress
-
-このプロジェクトは段階的にAWS Lambdaへ移行中です。
-
-- ✅ **Phase 1**: S3ストレージ対応
-- ✅ **Phase 2**: Spring依存削除、Lambda対応（現在）
-- ⬜ **Phase 3**: Lambdaハンドラー実装完了
-- ⬜ **Phase 4**: デプロイ設定（SAM/Serverless）
-
-## アーキテクチャ
+## 🏗️ アーキテクチャ
 
 ```
-src/main/kotlin/com/example/pdfbatch/
-├── Application.kt                          # エントリーポイント（Spring Boot）
-├── lambda/
-│   └── LambdaHandler.kt                    # Lambda エントリーポイント
-├── di/
-│   └── DependencyContainer.kt              # 手動DIコンテナ（Lambda用）
-├── config/
-│   ├── AppConfig.kt                        # 環境変数設定（Lambda用）
-│   ├── OkHttpConfig.kt                     # OkHttp設定
-│   └── StorageConfig.kt                    # ストレージ設定
-├── domain/
-│   └── Metadata.kt                         # ドメインモデル
-├── ports/
-│   └── Ports.kt                            # インターフェース定義
-├── application/
-│   └── PdfFetchService.kt                  # アプリケーションサービス（@Service）
-├── adapters/
-│   ├── http/
-│   │   └── OkHttpPdfDownloader.kt         # HTTP通信アダプター（@Component）
-│   └── storage/
-│       └── S3Storage.kt                    # S3ストレージアダプター（@Component）
-└── entrypoints/
-    └── RunnerConfigAndScheduled.kt        # 起動・スケジュール制御（Spring Boot）
+EventBridge (スケジュール)
+    ↓
+Lambda Function (weather-batch)
+    ↓
+気象庁HP → PDF取得 → S3バケット
 ```
 
-### 依存関係管理
+- **実行環境**: AWS Lambda (Java 21)
+- **トリガー**: EventBridge (毎時実行)
+- **ストレージ**: Amazon S3
+- **アーキテクチャパターン**: Hexagonal Architecture
 
-- **Lambda実行時**: `DependencyContainer`（手動DI）でインスタンスを生成
-- **Spring Boot実行時**: Spring DIで自動的にインスタンスを注入
+## 📋 前提条件
 
-コアロジック（PdfFetchService、OkHttpPdfDownloader、S3Storage）はSpringアノテーションを持つが、Lambda実行時は`DependencyContainer`が直接インスタンス化します。
-
-## 設定
-
-`src/main/resources/application.yml` で設定を変更できます：
-
-### ファイルシステムストレージ（デフォルト）
-
-```yaml
-pdf:
-  # 取得対象のURL（カンマ区切りで複数指定可能）
-  urls: https://example.com/sample.pdf,https://example.com/another.pdf
-  
-  # ストレージ設定
-  storage:
-    type: filesystem  # デフォルト
-    directory: ./data/pdfs
-  
-  # 実行設定
-  fetch:
-    run-on-startup: true          # 起動時に実行
-    cron: "0 0 * * * *"           # 毎時0分に実行
-```
-
-### S3ストレージ
-
-S3にPDFを保存する場合は、以下のように設定します：
-
-```yaml
-pdf:
-  urls: https://example.com/sample.pdf
-  
-  # ストレージ設定
-  storage:
-    type: s3  # S3を使用
-    s3:
-      bucket-name: weather-batch-pdfs  # S3バケット名
-      region: ap-northeast-1            # AWSリージョン
-      prefix: pdfs/                     # S3内のプレフィックス
-  
-  # 実行設定
-  fetch:
-    run-on-startup: true
-    cron: "0 0 * * * *"
-```
-
-#### AWS認証情報の設定
-
-S3を使用する場合、AWS認証情報が必要です：
-
-**ローカル開発:**
-- `~/.aws/credentials` ファイルを設定
-- または環境変数 `AWS_ACCESS_KEY_ID` と `AWS_SECRET_ACCESS_KEY` を設定
-
-```bash
-# 環境変数での設定例
-export AWS_ACCESS_KEY_ID=your-access-key
-export AWS_SECRET_ACCESS_KEY=your-secret-key
-export AWS_REGION=ap-northeast-1
-export S3_BUCKET_NAME=weather-batch-pdfs
-```
-
-**EC2/Lambda（本番環境）:**
-- IAMロールを使用（推奨）
-- 環境変数やクレデンシャルファイルは不要
-
-#### 必要なIAM権限
-
-S3ストレージを使用するには、以下のIAM権限が必要です：
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "s3:PutObject",
-        "s3:GetObject",
-        "s3:ListBucket",
-        "s3:HeadObject"
-      ],
-      "Resource": [
-        "arn:aws:s3:::weather-batch-pdfs/*",
-        "arn:aws:s3:::weather-batch-pdfs"
-      ]
-    }
-  ]
-}
-```
-
-### Cron式の例
-
-- `0 0 * * * *` - 毎時0分
-- `0 */30 * * * *` - 30分ごと
-- `0 0 9 * * *` - 毎日9時
-- `0 0 */6 * * *` - 6時間ごと
-
-## 実行方法
-
-### Lambda として実行
-
-環境変数を設定してLambdaハンドラーをテスト：
-
-```bash
-export PDF_URLS=https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa252_00.pdf
-export S3_BUCKET_NAME=your-bucket-name
-export AWS_REGION=ap-northeast-1
-
-# ローカルテスト（SAM CLI使用）
-sam local invoke -e event.json
-```
-
-#### テストイベント (event.json)
-
-```json
-{
-  "id": "cdc73f9d-aea9-11e3-9d5a-835b769c0d9c",
-  "detail-type": "Scheduled Event",
-  "source": "aws.events",
-  "time": "2025-12-31T10:00:00Z",
-  "region": "ap-northeast-1",
-  "resources": ["arn:aws:events:ap-northeast-1:123456789012:rule/my-schedule"],
-  "detail": {}
-}
-```
-
-### Spring Boot として実行（ローカル開発）
-
-既存の方法で引き続き実行可能：
-
-```bash
-./gradlew bootRun
-```
-
-## ビルドと実行
-
-### 前提条件
-
+### 必須
 - Java 21+
 - Kotlin 2.2.21
+- AWS アカウント
+- AWS CLI 設定済み
 
-### ビルド
+### デプロイツール（どちらか）
+- **SAM CLI** (推奨): `brew install aws-sam-cli` / `choco install aws-sam-cli`
+- **Serverless Framework**: `npm install -g serverless`
+
+## 🚀 クイックスタート
+
+### 1. ビルド
 
 ```bash
-# Windows (PowerShell)
-.\gradlew.bat build
-
-# Linux/Mac
+# Gradle でビルド
 ./gradlew build
+
+# Lambda用ZIPパッケージを作成
+./gradlew buildLambdaZip
 ```
 
-### 実行
+生成されるファイル: `build/distributions/weather-batch.zip`
+
+### 2. ローカルテスト（SAMなし）
+
+最も簡単な方法。AWS認証情報さえあればテストできます。
 
 ```bash
-# Windows (PowerShell)
-.\gradlew.bat bootRun
+# 環境変数を設定
+export S3_BUCKET_NAME=your-test-bucket-name
+export AWS_ACCESS_KEY_ID=your-access-key
+export AWS_SECRET_ACCESS_KEY=your-secret-key
 
-# Linux/Mac
-./gradlew bootRun
+# IntelliJ IDEAで実行
+# src/main/kotlin/com/example/pdfbatch/lambda/LocalLambdaTest.kt を開いて実行
+
+# またはGradleから実行
+./gradlew run --args="com.example.pdfbatch.lambda.LocalLambdaTestKt"
 ```
 
-または、ビルド後のJARを実行：
+### 3. SAMでローカルテスト
 
 ```bash
-java -jar build/libs/weather-batch-0.0.1-SNAPSHOT.jar
+# Lambda用パッケージをビルド
+./gradlew buildLambdaZip
+
+# ローカルで実行
+sam local invoke WeatherBatchFunction \
+  -e event.json \
+  --parameter-overrides S3BucketName=your-test-bucket-name
+
+# 環境変数を上書きして実行
+sam local invoke WeatherBatchFunction \
+  -e event.json \
+  --parameter-overrides S3BucketName=your-test-bucket-name \
+  --env-vars '{"PDF_URLS":"https://example.com/test.pdf"}'
 ```
 
-### コマンドライン引数での設定上書き
+### 4. Serverless Frameworkでローカルテスト
 
 ```bash
-java -jar build/libs/weather-batch-0.0.1-SNAPSHOT.jar \
-  --pdf.urls=https://example.com/test.pdf \
-  --pdf.storage.directory=./custom/path \
-  --pdf.fetch.cron="0 */10 * * * *"
+# Lambda用パッケージをビルド
+./gradlew buildLambdaZip
+
+# ローカルで実行
+serverless invoke local -f fetchWeather -p event.json
 ```
 
-## 動作の流れ
+## 🌐 AWSへのデプロイ
 
-1. **起動時実行** (オプション)
-   - アプリケーション起動時に即座にPDF取得を実行
+### 方法1: SAM CLI（推奨）
 
-2. **スケジュール実行**
-   - 設定されたcron式に従って定期的にPDF取得を実行
+#### 初回デプロイ（ガイド付き）
 
-3. **PDF取得プロセス**
-   - 設定されたURLからPDFをダウンロード
-   - SHA-256ハッシュを計算
-   - 既存のメタデータと比較
-   - 差分がある場合のみ保存
-   - メタデータを更新
+```bash
+# Lambda用パッケージをビルド
+./gradlew buildLambdaZip
 
-## 出力
-
-### PDFファイル
-
-`./data/pdfs/` ディレクトリに以下の形式で保存されます：
-
-```
-pdf_20251215_143000_a1b2c3.pdf
+# SAM デプロイ（対話式）
+sam deploy --guided
 ```
 
-- タイムスタンプ: yyyyMMdd_HHmmss
-- URLハッシュ: 6文字の16進数
+対話式で以下を入力：
+- Stack Name: `weather-batch`
+- AWS Region: `ap-northeast-1`
+- Parameter S3BucketName: `your-unique-bucket-name`
+- Parameter ScheduleExpression: `cron(0 * * * ? *)` (毎時実行)
 
-### メタデータ
+設定は `samconfig.toml` に保存されます。
 
-`./data/pdfs/metadata.json` に履歴が保存されます：
+#### 2回目以降のデプロイ
 
-```json
-{
-  "items": [
-    {
-      "url": "https://example.com/sample.pdf",
-      "filename": "pdf_20251215_143000_a1b2c3.pdf",
-      "hash": "abc123...",
-      "downloadedAt": "2025-12-15T14:30:00",
-      "size": 123456
-    }
-  ]
-}
+```bash
+# ビルドしてデプロイ
+./gradlew buildLambdaZip
+sam deploy
 ```
 
-## Hexagonal Architecture について
+#### カスタムパラメータでデプロイ
 
-このアプリケーションは以下のレイヤーで構成されています：
+```bash
+sam deploy \
+  --parameter-overrides \
+    S3BucketName=my-weather-batch-bucket \
+    ScheduleExpression="cron(0 */6 * * ? *)"  # 6時間ごと
+```
 
-- **Domain**: ビジネスロジックとドメインモデル
-- **Ports**: インターフェース定義（入力/出力）
-- **Application**: ユースケース実装
-- **Adapters**: 外部システムとの接続実装
-- **Entrypoints**: アプリケーションの起動ポイント
+#### スタックの削除
 
-この構造により、テスタビリティと保守性が向上し、外部依存の交換が容易になります。
+```bash
+sam delete --stack-name weather-batch
+```
 
-## トラブルシューティング
+### 方法2: Serverless Framework
 
-### URLが取得できない場合
+#### 初回セットアップ
 
-- ネットワーク接続を確認
-- URLが正しいか確認
-- ファイアウォール設定を確認
+```bash
+# Serverless Frameworkをインストール（未インストールの場合）
+npm install -g serverless
 
-### ファイルが保存されない場合
+# AWS認証情報を設定
+serverless config credentials \
+  --provider aws \
+  --key YOUR_ACCESS_KEY \
+  --secret YOUR_SECRET_KEY
+```
 
-- `pdf.storage.directory` のパスに書き込み権限があるか確認
-- ディスク容量を確認
+#### デプロイ
 
-### スケジュールが動作しない場合
+```bash
+# Lambda用パッケージをビルド
+./gradlew buildLambdaZip
 
-- cron式が正しいか確認
-- ログレベルをDEBUGに設定して詳細を確認
+# デプロイ（dev環境）
+serverless deploy --stage dev
 
-## ライセンス
+# デプロイ（本番環境）
+serverless deploy --stage prod
+
+# 特定の関数のみデプロイ
+serverless deploy function -f fetchWeather
+```
+
+#### ログの確認
+
+```bash
+# リアルタイムログ
+serverless logs -f fetchWeather -t
+
+# 過去のログ
+serverless logs -f fetchWeather --startTime 1h
+```
+
+#### スタックの削除
+
+```bash
+serverless remove --stage dev
+```
+
+## ⚙️ 設定
+
+### 環境変数
+
+Lambda関数で使用する環境変数：
+
+| 環境変数 | 説明 | デフォルト値 |
+|---------|------|-------------|
+| `PDF_URLS` | 取得するPDFのURL（カンマ区切り） | 気象庁の天気図URL |
+| `S3_BUCKET_NAME` | S3バケット名 | (必須) |
+| `AWS_REGION` | AWSリージョン | `ap-northeast-1` |
+| `S3_PREFIX` | S3内のプレフィックス | `pdfs/` |
+| `S3_METADATA_KEY` | メタデータファイルのキー | `pdfs/metadata.json` |
+
+### スケジュール設定
+
+#### SAM (`template.yaml`)
+
+```yaml
+Parameters:
+  ScheduleExpression:
+    Type: String
+    Default: cron(0 * * * ? *)  # 毎時実行
+```
+
+#### Serverless (`serverless.yml`)
+
+```yaml
+functions:
+  fetchWeather:
+    events:
+      - schedule:
+          rate: cron(0 * * * ? *)  # 毎時実行
+```
+
+#### スケジュール例
+
+- `cron(0 * * * ? *)` - 毎時0分
+- `cron(0 */6 * * ? *)` - 6時間ごと
+- `cron(0 0 * * ? *)` - 毎日0時
+- `cron(0 9 * * ? *)` - 毎日9時
+- `rate(1 hour)` - 1時間ごと
+
+## 📊 モニタリング
+
+### CloudWatch Logs
+
+```bash
+# SAM
+sam logs --stack-name weather-batch --tail
+
+# Serverless
+serverless logs -f fetchWeather -t
+
+# AWS CLI
+aws logs tail /aws/lambda/weather-batch --follow
+```
+
+### CloudWatch メトリクス
+
+AWS コンソール → CloudWatch → Lambda → weather-batch
+
+確認項目：
+- Invocations（実行回数）
+- Duration（実行時間）
+- Errors（エラー数）
+- Throttles（スロットル）
+
+## 💰 コスト見積もり
+
+### 毎時実行（720回/月）の場合
+
+| 項目 | 使用量 | 料金 |
+|------|--------|------|
+| Lambda実行 | 720回/月 | $0（無料枠内） |
+| Lambda実行時間 | 72GB秒/月 | $0（無料枠内） |
+| S3ストレージ | 0.72GB | $0.02/月 |
+| S3リクエスト | 720回 | $0.003/月 |
+| **合計** | - | **約$0.02/月（3円）** |
+
+※ 無料枠: Lambda 100万リクエスト/月、40万GB秒/月
+
+## 🔧 トラブルシューティング
+
+### Lambda実行エラー
+
+```bash
+# SAM
+sam logs --stack-name weather-batch
+
+# Serverless
+serverless logs -f fetchWeather
+```
+
+### S3アクセスエラー
+
+IAMロールの権限を確認：
+```bash
+aws iam get-role-policy --role-name weather-batch-role --policy-name S3Access
+```
+
+### タイムアウト
+
+`template.yaml` または `serverless.yml` でタイムアウトを延長：
+```yaml
+Timeout: 300  # 秒
+```
+
+### メモリ不足
+
+メモリサイズを増やす：
+```yaml
+MemorySize: 1024  # MB
+```
+
+## 📁 プロジェクト構造
+
+```
+weather-batch/
+├── src/main/kotlin/com/example/pdfbatch/
+│   ├── domain/              # ドメインモデル
+│   ├── ports/               # インターフェース定義
+│   ├── application/         # ユースケース
+│   ├── adapters/            # 外部システム接続
+│   │   ├── http/            # HTTP通信
+│   │   ├── storage/         # S3ストレージ
+│   │   └── persistence/     # メタデータ管理
+│   ├── config/              # 設定管理
+│   ├── di/                  # 依存性注入
+│   └── lambda/              # Lambdaエントリーポイント
+├── template.yaml            # SAM設定
+├── serverless.yml           # Serverless Framework設定
+├── event.json               # テストイベント
+└── build.gradle.kts         # ビルド設定
+```
+
+## 🌳 ブランチ戦略
+
+- `main`: AWS Lambda用（本番）
+- `master`: Spring Boot版（ローカル開発用）
+
+## 📝 ライセンス
 
 このプロジェクトはサンプルアプリケーションです。
 
+## 🤝 コントリビューション
+
+Issues・Pull Requestsは歓迎です！
