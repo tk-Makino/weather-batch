@@ -3,6 +3,7 @@ package com.example.pdfbatch.lambda
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.ScheduledEvent
+import com.example.pdfbatch.config.AppConfig
 import com.example.pdfbatch.di.DependencyContainer
 import org.slf4j.LoggerFactory
 
@@ -20,7 +21,7 @@ class LambdaHandler : RequestHandler<ScheduledEvent, String> {
         logger.info("Event: ${event.id}, Time: ${event.time}")
         
         return try {
-            val config = com.example.pdfbatch.config.AppConfig.fromEnvironment()
+            val config = AppConfig.fromEnvironment()
             pdfFetchService.fetchMultiple(config.pdfUrls)
             logger.info("PDF fetch completed successfully")
             "Success: PDF fetch completed"
