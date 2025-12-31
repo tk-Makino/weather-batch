@@ -3,7 +3,6 @@ package com.example.pdfbatch.adapters.storage
 import com.example.pdfbatch.config.StorageProperties
 import com.example.pdfbatch.ports.Storage
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
 import software.amazon.awssdk.core.sync.RequestBody
@@ -17,7 +16,7 @@ import software.amazon.awssdk.services.s3.model.*
 @Component
 @ConditionalOnProperty(name = ["pdf.storage.type"], havingValue = "s3")
 class S3Storage(
-    private val properties: StorageProperties,
+    properties: StorageProperties,
 ) : Storage {
 
     /**
