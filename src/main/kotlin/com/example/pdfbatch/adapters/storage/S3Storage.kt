@@ -39,9 +39,15 @@ class S3Storage(
                 .contentType("application/pdf")
                 .build()
 
-            s3Client.putObject(putRequest, RequestBody.fromBytes(data))
-            logger.info("Saved file to S3: $key (${data.size} bytes)")
-            true
+            val response = s3Client.putObject(putRequest, RequestBody.fromBytes(data))
+            // Verify the ETag is present to confirm successful upload
+            if (response.eTag() != null) {
+                logger.info("Saved file to S3: $key (${data.size} bytes)")
+                true
+            } else {
+                logger.error("S3 upload completed but no ETag returned for: $filename")
+                false
+            }
         } catch (e: S3Exception) {
             logger.error("S3 error saving file: $filename", e)
             false
@@ -83,7 +89,9 @@ class S3Storage(
         // S3ではディレクトリの存在確認は不要
         // プレフィックスに該当するオブジェクトがあるかチェック
         return try {
-            val key = buildKey(directory)
+            // ディレクトリにはトレーリングスラッシュを追加
+            val directoryKey = if (directory.endsWith("/")) directory else "$directory/"
+            val key = buildKey(directoryKey)
             val listRequest = ListObjectsV2Request.builder()
                 .bucket(bucketName)
                 .prefix(key)
@@ -106,7 +114,11 @@ class S3Storage(
      */
     private fun buildKey(filename: String): String {
         val normalizedPrefix = if (prefix.endsWith("/")) prefix else "$prefix/"
-        val normalizedFilename = if (filename.startsWith("/")) filename.substring(1) else filename
+        // 複数の先頭スラッシュを除去し、空文字列をチェック
+        val normalizedFilename = filename.trimStart('/')
+        if (normalizedFilename.isEmpty()) {
+            throw IllegalArgumentException("Filename cannot be empty or contain only slashes")
+        }
         return "$normalizedPrefix$normalizedFilename"
     }
 }
