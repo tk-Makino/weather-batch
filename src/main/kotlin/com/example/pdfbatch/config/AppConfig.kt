@@ -31,3 +31,21 @@ data class AppConfig(
         }
     }
 }
+
+/**
+ * ストレージ設定プロパティ
+ */
+data class StorageProperties(
+    val type: String = "s3",
+    val directory: String = "",
+    val s3: S3Properties = S3Properties()
+)
+
+/**
+ * S3設定プロパティ
+ */
+data class S3Properties(
+    val bucketName: String? = null,
+    val region: String? = null,
+    val prefix: String? = null,
+)

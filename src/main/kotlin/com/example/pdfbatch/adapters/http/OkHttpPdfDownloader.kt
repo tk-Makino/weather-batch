@@ -4,12 +4,10 @@ import com.example.pdfbatch.ports.PdfDownloader
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.slf4j.LoggerFactory
-import org.springframework.stereotype.Component
 
 /**
  * OkHttpを使用したPDFダウンローダー実装
  */
-@Component
 class OkHttpPdfDownloader(
     private val okHttpClient: OkHttpClient
 ) : PdfDownloader {

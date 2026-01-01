@@ -42,3 +42,14 @@ out/
 
 ### Application Data ###
 data/
+
+# SAM
+.aws-sam/
+samconfig.toml
+
+# Serverless Framework
+.serverless/
+node_modules/
+
+# Lambda build artifacts
+build/distributions/*.zip

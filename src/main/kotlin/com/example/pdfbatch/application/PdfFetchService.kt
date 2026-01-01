@@ -3,7 +3,6 @@ package com.example.pdfbatch.application
 import com.example.pdfbatch.ports.PdfDownloader
 import com.example.pdfbatch.ports.Storage
 import org.slf4j.LoggerFactory
-import org.springframework.stereotype.Service
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -11,7 +10,6 @@ import java.time.format.DateTimeFormatter
 /**
  * PDF取得アプリケーションサービス（ユースケース）
  */
-@Service
 class PdfFetchService(
     private val pdfDownloader: PdfDownloader,
     private val storage: Storage,
@@ -52,10 +50,6 @@ class PdfFetchService(
         val filename = generateFilename(url)
         val directoryPath = generateDirectoryPath(timestamp)
         val relativePath = "$directoryPath/$filename"
-        if(!storage.existDirectory(directoryPath)) {
-            storage.createDirectory(directoryPath)
-            logger.info("Directory does not exist. Creating: $directoryPath")
-        }
         if (!storage.saveFileToS3(relativePath, pdfData)) {
             logger.error("Failed to save PDF: $relativePath")
             return
