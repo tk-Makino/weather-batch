@@ -24,7 +24,6 @@ Parameters:
   ScheduleExpression:
     Type: String
     Default: cron(0 * * * ? *)
-    Description: CloudWatch Events schedule expression (default: every hour)
 
 Resources:
   # Lambda Function
@@ -38,7 +37,6 @@ Resources:
       Environment:
         Variables:
           S3_BUCKET_NAME: !Ref S3BucketName
-          AWS_REGION: !Ref AWS::Region
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref S3BucketName
