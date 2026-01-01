@@ -50,10 +50,6 @@ class PdfFetchService(
         val filename = generateFilename(url)
         val directoryPath = generateDirectoryPath(timestamp)
         val relativePath = "$directoryPath/$filename"
-        if(!storage.existDirectory(directoryPath)) {
-            storage.createDirectory(directoryPath)
-            logger.info("Directory does not exist. Creating: $directoryPath")
-        }
         if (!storage.saveFileToS3(relativePath, pdfData)) {
             logger.error("Failed to save PDF: $relativePath")
             return
