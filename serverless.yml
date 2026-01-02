@@ -11,7 +11,8 @@ provider:
   architecture: x86_64
   
   environment:
-    PDF_URLS: https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa252_00.pdf
+    PDF_URLS_00: https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa252_00.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa302_00.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa402_00.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa502_00.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe5782_00.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe5784_00.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe577_00.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe502_00.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe504_00.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe507_00.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/aupa20_00.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/aupa25_00.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/aupn30_00.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/aupq35_00.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/aupq78_00.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/axfe578_00.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/axjp140_00.pdf
+    PDF_URLS_12: https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa252_12.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa302_12.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa402_12.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa502_12.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe5782_12.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe5784_12.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe577_12.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe502_12.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe504_12.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fxfe507_12.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/aupa20_12.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/aupa25_12.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/aupn30_12.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/aupq35_12.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/aupq78_12.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/axfe578_12.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/axjp140_12.pdf
     S3_BUCKET_NAME: ${self:custom.bucketName}
     AWS_REGION: ${self:provider.region}
     S3_PREFIX: pdfs/
@@ -41,9 +42,17 @@ functions:
     description: Fetch weather charts from JMA and store to S3
     events:
       - schedule:
-          rate: cron(0 * * * ? *)
-          description: Hourly PDF fetch schedule
+          rate: cron(0 0 * * ? *)
+          description: PDF fetch at 00 UTC
           enabled: true
+          input:
+            timeSlot: "00"
+      - schedule:
+          rate: cron(0 12 * * ? *)
+          description: PDF fetch at 12 UTC
+          enabled: true
+          input:
+            timeSlot: "12"
     package:
       artifact: build/distributions/weather-batch.zip
 
