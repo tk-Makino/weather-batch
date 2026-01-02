@@ -52,7 +52,7 @@ Globals:
           https://www.data.jma.go.jp/yoho/data/wxchart/quick/{yyyyMM}/SPAS_COLOR_{yyyyMMdd}1200.png,
           https://www.data.jma.go.jp/yoho/data/wxchart/quick/{yyyyMM}/SPAS_COLOR_{yyyyMMdd}1500.png,
           https://www.data.jma.go.jp/yoho/data/wxchart/quick/{yyyyMM}/SPAS_COLOR_{yyyyMMdd}1800.png,
-          https://www.data.jma.go.jp/yoho/data/wxchart/quick/{yyyyMM}/SPAS_COLOR_{yyyyMMdd}2100.png,
+          https://www.data.jma.go.jp/yoho/data/wxchart/quick/{yyyyMM}/SPAS_COLOR_{yyyyMMdd}2100.png
         S3_PREFIX: pdfs/
         S3_METADATA_KEY: pdfs/metadata.json
 

@@ -31,33 +31,70 @@ class S3Storage(
         logger.info("Initialized S3Storage with bucket: $bucketName, region: $regionName, prefix: $prefix")
     }
 
-    override fun saveFileToS3(filename: String, data: ByteArray): Boolean {
+    override fun saveFileToS3(
+        filename: String,
+        data: ByteArray
+    ): Boolean {
+        return uploadToS3(
+            filename,
+            data,
+            "application/pdf",
+            "file"
+        )
+    }
+
+    override fun saveImageToS3(
+        filename: String,
+        data: ByteArray
+    ): Boolean {
+        return uploadToS3(
+            filename,
+            data,
+            "image/png",
+            "image"
+        )
+    }
+
+    /**
+     * S3にファイルをアップロードする共通処理
+     *
+     * @param filename ファイル名
+     * @param data ファイルデータ
+     * @param contentType コンテンツタイプ
+     * @param fileType ログ出力用のファイルタイプ（"file" or "image"）
+     * @return アップロード成功時true、失敗時false
+     */
+    private fun uploadToS3(
+        filename: String,
+        data: ByteArray,
+        contentType: String,
+        fileType: String
+    ): Boolean {
         return try {
             val key = buildKey(filename)
             val putRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
                 .key(key)
-                .contentType("application/pdf")
+                .contentType(contentType)
                 .build()
 
             val response = s3Client.putObject(putRequest, RequestBody.fromBytes(data))
-            // Verify the ETag is present to confirm successful upload
+
             if (response.eTag() != null) {
-                logger.info("Saved file to S3: $key (${data.size} bytes)")
+                logger.info("Saved $fileType to S3: $key (${data.size} bytes)")
                 true
             } else {
                 logger.error("S3 upload completed but no ETag returned for: $filename")
                 false
             }
         } catch (e: S3Exception) {
-            logger.error("S3 error saving file: $filename", e)
+            logger.error("S3 error saving $fileType: $filename", e)
             false
         } catch (e: Exception) {
-            logger.error("Error saving file to S3: $filename", e)
+            logger.error("Error saving $fileType to S3: $filename", e)
             false
         }
     }
-
     /**
      * S3のキーを構築（プレフィックス + ファイル名）
      */

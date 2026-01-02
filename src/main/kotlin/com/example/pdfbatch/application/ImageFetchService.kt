@@ -54,7 +54,7 @@ class ImageFetchService(
         val filename = generateFilename(url)
         val directoryPath = generateDirectoryPath(timestamp.minusDays(1)) // 前日の天気図を保存
         val relativePath = "$directoryPath/$filename"
-        if (!storage.saveFileToS3(relativePath, imageData)) {
+        if (!storage.saveImageToS3(relativePath, imageData)) {
             logger.error("Failed to save Image: $relativePath")
             return
         }
