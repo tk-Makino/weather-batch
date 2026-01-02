@@ -1,28 +1,64 @@
 # Weather Batch - AWS Lambda
 
-気象庁HPから天気図を定期的に取得し、S3に保存するAWS Lambdaバッチアプリケーションです。
-
-## 🎯 AWS Lambda Migration Status
-
-- ✅ **Phase 1**: S3ストレージ対応
-- ✅ **Phase 2**: Spring依存削除、Lambda対応
-- ✅ **Phase 3**: Lambda専用構成、デプロイ設定完了 **← 現在**
-- ⬜ **Phase 4**: 本番デプロイ、運用開始
+気象庁HPから天気図を定期的に取得し、S3に保存するAWS Lambdaバッチアプリケーション。
 
 ## 🏗️ アーキテクチャ
 
 ```
-EventBridge (スケジュール)
-    ↓
-Lambda Function (weather-batch)
-    ↓
-気象庁HP → PDF取得 → S3バケット
+EventBridge (00 UTC スケジュール) ─┐
+                                  ├─→ Lambda Function (weather-batch)
+EventBridge (12 UTC スケジュール) ─┘       ↓
+                                    気象庁HP → PDF取得 → S3バケット
+                                                ↓
+                                         YYYY/MM/DD/00/ または
+                                         YYYY/MM/DD/12/
 ```
 
 - **実行環境**: AWS Lambda (Java 21)
-- **トリガー**: EventBridge (毎時実行)
+- **トリガー**: EventBridge × 2 (00 UTC と 12 UTC で別々に実行)
 - **ストレージ**: Amazon S3
 - **アーキテクチャパターン**: Hexagonal Architecture
+
+## 🕐 時間帯別PDF取得
+
+このアプリケーションは、00UTCと12UTCでそれぞれ異なるPDFを取得します。
+
+### 動作の仕組み
+
+1. **EventBridgeが時刻に応じて異なるパラメータを送信**
+   - 00 UTC: `{"timeSlot": "00"}` を送信
+   - 12 UTC: `{"timeSlot": "12"}` を送信
+
+2. **Lambda関数が環境変数から対応するURLリストを取得**
+   - `timeSlot=00` → `PDF_URLS_00` を使用
+   - `timeSlot=12` → `PDF_URLS_12` を使用
+
+3. **S3保存時にディレクトリが分かれる**
+   - 00 UTC: `YYYY/MM/DD/00/filename.pdf`
+   - 12 UTC: `YYYY/MM/DD/12/filename.pdf`
+
+### ディレクトリ構造例
+
+```
+s3://weather-batch-pdfs/
+  pdfs/
+    2026/
+      01/
+        01/
+          00/
+            fupa252_00.pdf
+            fupa302_00.pdf
+            ...
+          12/
+            fupa252_12.pdf
+            fupa302_12.pdf
+            ...
+        02/
+          00/
+            ...
+          12/
+            ...
+```
 
 ## 📋 前提条件
 
@@ -63,6 +99,11 @@ export AWS_SECRET_ACCESS_KEY=your-secret-key
 # IntelliJ IDEAで実行
 # src/main/kotlin/com/example/pdfbatch/lambda/LocalLambdaTest.kt を開いて実行
 # または右クリック → Run 'LocalLambdaTestKt'
+
+# コマンドラインから実行（Gradle）
+./gradlew run                      # デフォルト: timeSlot=00
+./gradlew run --args="00"          # 00 UTC用のPDFを取得
+./gradlew run --args="12"          # 12 UTC用のPDFを取得
 ```
 
 ### 3. SAMでローカルテスト
@@ -71,16 +112,17 @@ export AWS_SECRET_ACCESS_KEY=your-secret-key
 # Lambda用パッケージをビルド
 ./gradlew buildLambdaZip
 
-# ローカルで実行
+# 00 UTC用のイベントでテスト
+echo '{"timeSlot": "00"}' > event-00.json
 sam local invoke WeatherBatchFunction \
-  -e event.json \
+  -e event-00.json \
   --parameter-overrides S3BucketName=your-test-bucket-name
 
-# 環境変数を上書きして実行
+# 12 UTC用のイベントでテスト
+echo '{"timeSlot": "12"}' > event-12.json
 sam local invoke WeatherBatchFunction \
-  -e event.json \
-  --parameter-overrides S3BucketName=your-test-bucket-name \
-  --env-vars '{"PDF_URLS":"https://example.com/test.pdf"}'
+  -e event-12.json \
+  --parameter-overrides S3BucketName=your-test-bucket-name
 ```
 
 ### 4. Serverless Frameworkでローカルテスト
@@ -89,8 +131,13 @@ sam local invoke WeatherBatchFunction \
 # Lambda用パッケージをビルド
 ./gradlew buildLambdaZip
 
-# ローカルで実行
-serverless invoke local -f fetchWeather -p event.json
+# 00 UTC用のイベントでテスト
+echo '{"timeSlot": "00"}' > event-00.json
+serverless invoke local -f fetchWeather -p event-00.json
+
+# 12 UTC用のイベントでテスト
+echo '{"timeSlot": "12"}' > event-12.json
+serverless invoke local -f fetchWeather -p event-12.json
 ```
 
 ## 🌐 AWSへのデプロイ
@@ -111,7 +158,8 @@ sam deploy --guided
 - Stack Name: `weather-batch`
 - AWS Region: `ap-northeast-1`
 - Parameter S3BucketName: `your-unique-bucket-name`
-- Parameter ScheduleExpression: `cron(0 * * * ? *)` (毎時実行)
+- Parameter Schedule00UTC: `cron(0 0 * * ? *)` (毎日00:00 UTC)
+- Parameter Schedule12UTC: `cron(0 12 * * ? *)` (毎日12:00 UTC)
 
 設定は `samconfig.toml` に保存されます。
 
@@ -129,60 +177,14 @@ sam deploy
 sam deploy \
   --parameter-overrides \
     S3BucketName=my-weather-batch-bucket \
-    ScheduleExpression="cron(0 */6 * * ? *)"  # 6時間ごと
+    Schedule00UTC="cron(0 0 * * ? *)" \
+    Schedule12UTC="cron(0 12 * * ? *)"
 ```
 
 #### スタックの削除
 
 ```bash
 sam delete --stack-name weather-batch
-```
-
-### 方法2: Serverless Framework
-
-#### 初回セットアップ
-
-```bash
-# Serverless Frameworkをインストール（未インストールの場合）
-npm install -g serverless
-
-# AWS認証情報を設定
-serverless config credentials \
-  --provider aws \
-  --key YOUR_ACCESS_KEY \
-  --secret YOUR_SECRET_KEY
-```
-
-#### デプロイ
-
-```bash
-# Lambda用パッケージをビルド
-./gradlew buildLambdaZip
-
-# デプロイ（dev環境）
-serverless deploy --stage dev
-
-# デプロイ（本番環境）
-serverless deploy --stage prod
-
-# 特定の関数のみデプロイ
-serverless deploy function -f fetchWeather
-```
-
-#### ログの確認
-
-```bash
-# リアルタイムログ
-serverless logs -f fetchWeather -t
-
-# 過去のログ
-serverless logs -f fetchWeather --startTime 1h
-```
-
-#### スタックの削除
-
-```bash
-serverless remove --stage dev
 ```
 
 ## ⚙️ 設定
@@ -193,7 +195,8 @@ Lambda関数で使用する環境変数：
 
 | 環境変数 | 説明 | デフォルト値 |
 |---------|------|-------------|
-| `PDF_URLS` | 取得するPDFのURL（カンマ区切り） | 気象庁の天気図URL |
+| `PDF_URLS_00` | 00UTCで取得するPDFのURL（カンマ区切り） | 気象庁の天気図URL (_00.pdf) |
+| `PDF_URLS_12` | 12UTCで取得するPDFのURL（カンマ区切り） | 気象庁の天気図URL (_12.pdf) |
 | `S3_BUCKET_NAME` | S3バケット名 | (必須) |
 | `AWS_REGION` | AWSリージョン | `ap-northeast-1` |
 | `S3_PREFIX` | S3内のプレフィックス | `pdfs/` |
@@ -205,30 +208,34 @@ Lambda関数で使用する環境変数：
 
 ```yaml
 Parameters:
-  ScheduleExpression:
+  Schedule00UTC:
     Type: String
-    Default: cron(0 * * * ? *)  # 毎時実行
+    Default: cron(0 0 * * ? *)   # 毎日00:00 UTC
+  
+  Schedule12UTC:
+    Type: String
+    Default: cron(0 12 * * ? *)  # 毎日12:00 UTC
 ```
 
-#### Serverless (`serverless.yml`)
+デプロイ時にカスタマイズ：
 
-```yaml
-functions:
-  fetchWeather:
-    events:
-      - schedule:
-          rate: cron(0 * * * ? *)  # 毎時実行
+```bash
+sam deploy \
+  --parameter-overrides \
+    S3BucketName=my-weather-batch-bucket \
+    Schedule00UTC="cron(0 0 * * ? *)" \
+    Schedule12UTC="cron(0 12 * * ? *)"
 ```
 
 #### スケジュール例
 
 **注意**: AWS EventBridgeのcron式は6フィールド形式で、Unix cronとは異なります。
 
-- `cron(0 * * * ? *)` - 毎時0分
+- `cron(0 0 * * ? *)` - 毎日00:00 UTC
+- `cron(0 12 * * ? *)` - 毎日12:00 UTC
+- `cron(0 0,12 * * ? *)` - 毎日00:00と12:00 UTC（単一ルールで両方）
 - `cron(0 */6 * * ? *)` - 6時間ごと
-- `cron(0 0 * * ? *)` - 毎日0時
-- `cron(0 9 * * ? *)` - 毎日9時
-- `rate(1 hour)` - 1時間ごと
+- `rate(12 hours)` - 12時間ごと
 
 フォーマット: `cron(分 時 日 月 曜日 年)`
 - 曜日または日のどちらかに `?` を使用する必要があります
@@ -321,8 +328,6 @@ weather-batch/
 │   ├── di/                  # 依存性注入
 │   └── lambda/              # Lambdaエントリーポイント
 ├── template.yaml            # SAM設定
-├── serverless.yml           # Serverless Framework設定
-├── event.json               # テストイベント
 └── build.gradle.kts         # ビルド設定
 ```
 
@@ -334,7 +339,3 @@ weather-batch/
 ## 📝 ライセンス
 
 このプロジェクトはサンプルアプリケーションです。
-
-## 🤝 コントリビューション
-
-Issues・Pull Requestsは歓迎です！

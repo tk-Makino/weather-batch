@@ -2,20 +2,27 @@ package com.example.pdfbatch.lambda
 
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.LambdaLogger
-import com.amazonaws.services.lambda.runtime.events.ScheduledEvent
 
 /**
  * ローカルでLambdaハンドラーをテストするための実行ファイル
  * SAMやServerless Frameworkなしで動作確認できます
  */
-fun main() {
+fun main(args: Array<String>) {
     println("=".repeat(60))
     println("Weather Batch Lambda - Local Test")
     println("=".repeat(60))
     
+    // コマンドライン引数からtimeSlotを取得（デフォルト: 00）
+    val timeSlot = args.getOrNull(0) ?: "00"
+    println("Testing with timeSlot: $timeSlot")
+    println("Usage: ./gradlew run --args=\"<timeSlot>\"")
+    println("Example: ./gradlew run --args=\"12\"")
+    println("=".repeat(60))
+
     // 環境変数を設定（実際の値に変更してください）
     val testConfig = mapOf(
-        "PDF_URLS" to "https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa252_00.pdf",
+        "PDF_URLS_00" to "https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa252_00.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa302_00.pdf",
+        "PDF_URLS_12" to "https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa252_12.pdf,https://www.jma.go.jp/bosai/numericmap/data/nwpmap/fupa302_12.pdf",
         "S3_BUCKET_NAME" to (System.getenv("S3_BUCKET_NAME") ?: "your-test-bucket-name"),
         "AWS_REGION" to "ap-northeast-1",
         "S3_PREFIX" to "pdfs/",
@@ -24,7 +31,7 @@ fun main() {
     
     testConfig.forEach { (key, value) ->
         System.setProperty(key, value)
-        println("$key = $value")
+        println("$key = ${if (key.startsWith("PDF_URLS")) value.take(80) + "..." else value}")
     }
     println("=".repeat(60))
     
@@ -41,14 +48,9 @@ fun main() {
     }
     println("=".repeat(60))
     
-    // モックのScheduledEventを作成
-    val event = ScheduledEvent().apply {
-        id = "local-test-event-${System.currentTimeMillis()}"
-        region = "ap-northeast-1"
-        source = "local.test"
-        detailType = "Scheduled Event"
-    }
-    
+    // モックのEventBridge入力を作成
+    val event = mapOf("timeSlot" to timeSlot)
+
     // モックのContextを作成
     val context = MockLambdaContext()
     
