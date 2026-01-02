@@ -1,5 +1,6 @@
 package com.example.pdfbatch.application
 
+import com.example.pdfbatch.ports.ImageDownloader
 import com.example.pdfbatch.ports.PdfDownloader
 import com.example.pdfbatch.ports.Storage
 import org.slf4j.LoggerFactory
@@ -8,57 +9,55 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 /**
- * PDF取得アプリケーションサービス(ユースケース)
+ * 画像取得アプリケーションサービス(ユースケース)
  */
-class PdfFetchService(
-    private val pdfDownloader: PdfDownloader,
+class ImageFetchService(
+    private val imageDownloader: ImageDownloader,
     private val storage: Storage,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
-    private val prefix = "weather-map"
+    private val prefix = "surface-weather-map"
 
     /**
-     * 複数URLから気象庁天気図PDFを取得
+     * 複数URL(地上気象天気図)から画像を取得
      *
      * @param urls 取得するPDFのURLリスト
-     * @param timeSlot 時間帯 (00 or 12)
      */
-    fun fetchMultiple(urls: List<String>, timeSlot: String) {
+    fun fetchMultipleSurfaceWeatherMapImages(urls: List<String>) {
+        logger.info("Starting batch fetch for ${urls.size} URLs")
         urls.forEach { url ->
             try {
-                fetchAndSaveWeatherMap(url, timeSlot)
+                fetchAndSaveWeatherMapImage(url)
             } catch (e: Exception) {
-                logger.error("Error fetching PDF from $url", e)
+                logger.error("Error fetching Image from $url", e)
             }
         }
+        logger.info("Batch fetch completed.")
     }
 
     /**
-     * 指定URLからPDFを取得し保存
+     * 地上気象天気図を取得（画像）
      *
-     * @param url 取得するPDFのURL
-     * @param timeSlot 時間帯 (00 or 12)
+     * @param url 取得する画像のURL
      */
-    private fun fetchAndSaveWeatherMap(
+    private fun fetchAndSaveWeatherMapImage(
         url: String,
-        timeSlot: String,
         ) {
-        // 1. PDFをダウンロード
-        val pdfData = pdfDownloader.download(url)
-        if (pdfData == null) {
-            logger.warn("Failed to download PDF from: $url")
+        // 1. 画像をダウンロード
+        val imageData = imageDownloader.download(url)
+        if (imageData == null) {
+            logger.warn("Failed to download image from: $url")
             return
         }
         // 2. ファイルの保存
         val timestamp = LocalDateTime.now(ZoneOffset.UTC)
         val filename = generateFilename(url)
-        val directoryPath = generateDirectoryPath(timestamp, timeSlot)
+        val directoryPath = generateDirectoryPath(timestamp.minusDays(1)) // 前日の天気図を保存
         val relativePath = "$directoryPath/$filename"
-        if (!storage.saveFileToS3(relativePath, pdfData)) {
-            logger.error("Failed to save PDF: $relativePath")
+        if (!storage.saveFileToS3(relativePath, imageData)) {
+            logger.error("Failed to save Image: $relativePath")
             return
         }
-        logger.info("Saved PDF as: $relativePath")
     }
 
     /**
@@ -75,14 +74,12 @@ class PdfFetchService(
      * ディレクトリパスを生成
      *
      * @param timestamp タイムスタンプ
-     * @param timeSlot 時間帯 (00 or 12)
-     * @return "weather-map/YYYY/MM/DD/HH"形式の相対パス
+     * @return "YYYY/MM/DD"形式の相対パス
      */
     private fun generateDirectoryPath(
         timestamp: LocalDateTime,
-        timeSlot: String
     ): String {
         val format = DateTimeFormatter.ofPattern("yyyy/MM/dd")
-        return "$prefix/${timestamp.format(format)}/$timeSlot"
+        return "$prefix/${timestamp.format(format)}"
     }
 }

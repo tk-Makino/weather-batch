@@ -1,7 +1,9 @@
 package com.example.pdfbatch.di
 
+import com.example.pdfbatch.adapters.http.OkHttpImageDownloader
 import com.example.pdfbatch.adapters.http.OkHttpPdfDownloader
 import com.example.pdfbatch.adapters.storage.S3Storage
+import com.example.pdfbatch.application.ImageFetchService
 import com.example.pdfbatch.application.PdfFetchService
 import com.example.pdfbatch.config.AppConfig
 import com.example.pdfbatch.config.S3Properties
@@ -30,6 +32,10 @@ object DependencyContainer {
     private val downloader by lazy {
         OkHttpPdfDownloader(okHttpClient)
     }
+
+    private val imageDownloader by lazy {
+        OkHttpImageDownloader(okHttpClient)
+    }
     
     private val storageProperties by lazy {
         StorageProperties(
@@ -50,6 +56,13 @@ object DependencyContainer {
     val pdfFetchService: PdfFetchService by lazy {
         PdfFetchService(
             pdfDownloader = downloader,
+            storage = storage
+        )
+    }
+
+    val imageFetchService: ImageFetchService by lazy {
+        ImageFetchService(
+            imageDownloader = imageDownloader,
             storage = storage
         )
     }

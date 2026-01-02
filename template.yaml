@@ -45,6 +45,14 @@ Globals:
           https://www.jma.go.jp/bosai/numericmap/data/nwpmap/aupq78_12.pdf,
           https://www.jma.go.jp/bosai/numericmap/data/nwpmap/axfe578_12.pdf,
           https://www.jma.go.jp/bosai/numericmap/data/nwpmap/axjp140_12.pdf
+        IMAGE_URLS: https://www.data.jma.go.jp/yoho/data/wxchart/quick/{yyyyMM}/SPAS_COLOR_{yyyyMMdd}0000.png,
+          https://www.data.jma.go.jp/yoho/data/wxchart/quick/{yyyyMM}/SPAS_COLOR_{yyyyMMdd}0300.png,
+          https://www.data.jma.go.jp/yoho/data/wxchart/quick/{yyyyMM}/SPAS_COLOR_{yyyyMMdd}0600.png,
+          https://www.data.jma.go.jp/yoho/data/wxchart/quick/{yyyyMM}/SPAS_COLOR_{yyyyMMdd}0900.png,
+          https://www.data.jma.go.jp/yoho/data/wxchart/quick/{yyyyMM}/SPAS_COLOR_{yyyyMMdd}1200.png,
+          https://www.data.jma.go.jp/yoho/data/wxchart/quick/{yyyyMM}/SPAS_COLOR_{yyyyMMdd}1500.png,
+          https://www.data.jma.go.jp/yoho/data/wxchart/quick/{yyyyMM}/SPAS_COLOR_{yyyyMMdd}1800.png,
+          https://www.data.jma.go.jp/yoho/data/wxchart/quick/{yyyyMM}/SPAS_COLOR_{yyyyMMdd}2100.png,
         S3_PREFIX: pdfs/
         S3_METADATA_KEY: pdfs/metadata.json
 
@@ -56,12 +64,12 @@ Parameters:
   
   Schedule00UTC:
     Type: String
-    Default: cron(30 1 * * ? *)
+    Default: cron(30 3 * * ? *)
     Description: Schedule expression for 00 UTC execution
 
   Schedule12UTC:
     Type: String
-    Default: cron(30 13 * * ? *)
+    Default: cron(30 15 * * ? *)
     Description: Schedule expression for 12 UTC execution
 
 Resources:

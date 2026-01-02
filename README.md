@@ -8,20 +8,16 @@
 EventBridge (00 UTC スケジュール) ─┐
                                   ├─→ Lambda Function (weather-batch)
 EventBridge (12 UTC スケジュール) ─┘       ↓
-                                    気象庁HP → PDF取得 → S3バケット
+                                    気象庁HP → PDFor画像取得 → S3バケット
                                                 ↓
                                          YYYY/MM/DD/00/ または
                                          YYYY/MM/DD/12/
 ```
 
 - **実行環境**: AWS Lambda (Java 21)
-- **トリガー**: EventBridge × 2 (00 UTC と 12 UTC で別々に実行)
+- **トリガー**: EventBridge × 2 (00 UTC, 12 UTC)
 - **ストレージ**: Amazon S3
 - **アーキテクチャパターン**: Hexagonal Architecture
-
-## 🕐 時間帯別PDF取得
-
-このアプリケーションは、00UTCと12UTCでそれぞれ異なるPDFを取得します。
 
 ### 動作の仕組み
 
@@ -34,29 +30,33 @@ EventBridge (12 UTC スケジュール) ─┘       ↓
    - `timeSlot=12` → `PDF_URLS_12` を使用
 
 3. **S3保存時にディレクトリが分かれる**
-   - 00 UTC: `YYYY/MM/DD/00/filename.pdf`
-   - 12 UTC: `YYYY/MM/DD/12/filename.pdf`
+   - hh UTC: `YYYY/MM/DD/hh/filename.pdf`
 
-### ディレクトリ構造例
+### ディレクトリ構造
 
 ```
 s3://weather-batch-pdfs/
   pdfs/
-    2026/
-      01/
+    weather-map/
+      2026/
         01/
-          00/
-            fupa252_00.pdf
-            fupa302_00.pdf
-            ...
-          12/
-            fupa252_12.pdf
-            fupa302_12.pdf
-            ...
-        02/
-          00/
-            ...
-          12/
+          01/
+            00/
+              fupa252_00.pdf
+              fupa302_00.pdf
+              ...
+            12/
+              fupa252_12.pdf
+              fupa302_12.pdf
+              ...
+          02/
+            00/
+              ...
+            12/
+    surface-weather-map/
+      2026/
+        01/
+         01/
             ...
 ```
 
@@ -68,9 +68,8 @@ s3://weather-batch-pdfs/
 - AWS アカウント
 - AWS CLI 設定済み
 
-### デプロイツール（どちらか）
+### デプロイツール
 - **SAM CLI** (推奨): `brew install aws-sam-cli` / `choco install aws-sam-cli`
-- **Serverless Framework**: `npm install -g serverless`
 
 ## 🚀 クイックスタート
 
